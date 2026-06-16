@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Computer Networking Notes — Kurose & Ross 9th Ed.</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+  
+</head>
+<body>
+
+<div id="cursor-ring"></div>
+<div id="cursor-dot"></div>
+<canvas id="canvas"></canvas>
+
+<div class="wrapper">
+
+  <div class="hero">
+    <svg class="hero-icon" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="45" cy="45" r="42" stroke="#707C5B" stroke-width="2" fill="rgba(69,76,46,0.25)"/>
+      <circle cx="45" cy="45" r="8" fill="#B5BEB2"/>
+      <circle cx="45" cy="12" r="6" fill="#454C2E" stroke="#B5BEB2" stroke-width="1.5"/>
+      <circle cx="45" cy="78" r="6" fill="#454C2E" stroke="#B5BEB2" stroke-width="1.5"/>
+      <circle cx="15" cy="30" r="6" fill="#707C5B"/>
+      <circle cx="75" cy="30" r="6" fill="#707C5B"/>
+      <circle cx="15" cy="60" r="6" fill="#707C5B"/>
+      <circle cx="75" cy="60" r="6" fill="#707C5B"/>
+      <line x1="45" y1="45" x2="45" y2="18" stroke="#707C5B" stroke-width="1.5" stroke-dasharray="3 2"/>
+      <line x1="45" y1="45" x2="45" y2="72" stroke="#707C5B" stroke-width="1.5" stroke-dasharray="3 2"/>
+      <line x1="45" y1="45" x2="21" y2="33" stroke="#707C5B" stroke-width="1.5" stroke-dasharray="3 2"/>
+      <line x1="45" y1="45" x2="69" y2="33" stroke="#707C5B" stroke-width="1.5" stroke-dasharray="3 2"/>
+      <line x1="45" y1="45" x2="21" y2="57" stroke="#707C5B" stroke-width="1.5" stroke-dasharray="3 2"/>
+      <line x1="45" y1="45" x2="69" y2="57" stroke="#707C5B" stroke-width="1.5" stroke-dasharray="3 2"/>
+    </svg>
+    <h1>Computer <span>Networking</span><br>Study Notes</h1>
+    <p class="hero-sub">Kurose &amp; Ross — A Top-Down Approach, 9th Edition · Chapters 1–8</p>
+    <div class="divider"></div>
+  </div>
+
+  <div class="chapter-selector">
+    <label>Jump to Chapter</label>
+    <div class="select-wrap">
+      <select id="chapterSelect">
+        <option value="">— Select a chapter —</option>
+        <option value="0">Chapter 1 · Introduction</option>
+        <option value="1">Chapter 2 · Application Layer</option>
+        <option value="2">Chapter 3 · Transport Layer</option>
+        <option value="3">Chapter 4 · Network Layer: Data Plane</option>
+        <option value="4">Chapter 5 · Network Layer: Control Plane</option>
+        <option value="5">Chapter 6 · Link Layer &amp; LANs</option>
+        <option value="6">Chapter 7 · Wireless &amp; Mobile Networks</option>
+        <option value="7">Chapter 8 · Network Security</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="chapters" id="chapters"></div>
+
+  <div class="foot">
+    <p>Based on <em>Computer Networking: A Top-Down Approach, 9th Ed.</em> — Kurose &amp; Ross, Pearson 2025</p>
+    <p style="margin-top:4px;opacity:0.6;">Study notes — All original content © Kurose &amp; Ross</p>
+  </div>
+
+</div>
+
+<script>
+// ─── Custom Cursor ────────────────────────────────────
+(function() {
+  const ring = document.getElementById('cursor-ring');
+  const dot  = document.getElementById('cursor-dot');
+
+  // Smooth lagging ring position
+  let ringX = window.innerWidth / 2, ringY = window.innerHeight / 2;
+  let mouseX = ringX, mouseY = ringY;
+
+  document.addEventListener('mousemove', e => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    // Dot follows instantly
+    dot.style.left = mouseX + 'px';
+    dot.style.top  = mouseY + 'px';
+  });
+
+  // Smooth lerp for ring
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function animateCursor() {
+    ringX = lerp(ringX, mouseX, 0.12);
+    ringY = lerp(ringY, mouseY, 0.12);
+    ring.style.left = ringX + 'px';
+    ring.style.top  = ringY + 'px';
+    requestAnimationFrame(animateCursor);
+  }
+  animateCursor();
+
+  // Hover effect on interactive elements
+  const hoverTargets = 'a, button, select, .ch-header, .select-wrap, .tag, .concept-card, [onclick]';
+  document.addEventListener('mouseover', e => {
+    if (e.target.closest(hoverTargets)) document.body.classList.add('cursor-hover');
+  });
+  document.addEventListener('mouseout', e => {
+    if (e.target.closest(hoverTargets)) document.body.classList.remove('cursor-hover');
+  });
+
+  // Click burst effect
+  document.addEventListener('mousedown', () => {
+    document.body.classList.add('cursor-click');
+    document.body.classList.remove('cursor-hover');
+  });
+  document.addEventListener('mouseup', () => {
+    document.body.classList.remove('cursor-click');
+  });
+
+  // Hide when cursor leaves window
+  document.addEventListener('mouseleave', () => {
+    ring.style.opacity = '0'; dot.style.opacity = '0';
+  });
+  document.addEventListener('mouseenter', () => {
+    ring.style.opacity = '1'; dot.style.opacity = '1';
+  });
+})();
+
+// ─── Particle Canvas ──────────────────────────────────
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [];
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const COLORS = ['rgba(112,124,91,', 'rgba(181,190,178,', 'rgba(69,76,46,'];
+
+class Particle {
+  constructor() { this.init(); }
+  init() {
+    this.x  = Math.random() * W;
+    this.y  = Math.random() * H;
+    this.r  = Math.random() * 2.2 + 0.4;
+    this.vx = (Math.random() - 0.5) * 0.3;
+    this.vy = (Math.random() - 0.5) * 0.3;
+    this.alpha = Math.random() * 0.55 + 0.08;
+    this.glow  = Math.random() > 0.85;
+    this.col   = COLORS[Math.floor(Math.random() * COLORS.length)];
+    this.pulse = Math.random() * Math.PI * 2;
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy;
+    this.pulse += 0.02;
+    const a = this.alpha + Math.sin(this.pulse) * 0.12;
+    if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.init();
+    if (this.glow) {
+      ctx.shadowBlur  = 12;
+      ctx.shadowColor = this.col + '0.6)';
+    }
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ctx.fillStyle = this.col + Math.max(0.02, a) + ')';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+}
+
+// Connection lines between nearby particles
+function drawConnections() {
+  const maxDist = 110;
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const d  = Math.sqrt(dx * dx + dy * dy);
+      if (d < maxDist) {
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(112,124,91,${0.08 * (1 - d / maxDist)})`;
+        ctx.lineWidth   = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+// Fewer particles on mobile for performance
+const count = window.innerWidth < 600 ? 55 : 110;
+for (let i = 0; i < count; i++) particles.push(new Particle());
+
+function animate() {
+  ctx.clearRect(0, 0, W, H);
+  drawConnections();
+  particles.forEach(p => p.update());
+  requestAnimationFrame(animate);
+}
+animate();
+
+// ─── Chapter Data ─────────────────────────────────────
+const chapters = [
+  {
+    num: 1,
+    title: "Introduction to Computer Networking",
+    badge: "Internet · Protocols · Layers · Delay · History",
+    tags: ["ISP","Protocol","RFC","Packet Switching","Circuit Switching","Throughput","Latency","OSI","TCP/IP","History"],
+    illustration: `<svg viewBox="0 0 700 190" xmlns="http://www.w3.org/2000/svg">
+      <rect width="700" height="190" fill="#141810"/>
+      <!-- Internet cloud outline -->
+      <ellipse cx="350" cy="95" rx="200" ry="70" fill="rgba(69,76,46,0.18)" stroke="#454C2E" stroke-width="1.5" stroke-dasharray="6,4"/>
+      <text x="350" y="100" text-anchor="middle" font-family="Poppins,sans-serif" font-size="12" fill="#707C5B" font-weight="600">Internet Core</text>
+      <!-- Routers inside cloud -->
+      <circle cx="310" cy="85" r="10" fill="#454C2E" stroke="#707C5B" stroke-width="1.5"/>
+      <text x="310" y="89" text-anchor="middle" font-family="Poppins,sans-serif" font-size="7" fill="#DDDDD6">R</text>
+      <circle cx="370" cy="80" r="10" fill="#454C2E" stroke="#707C5B" stroke-width="1.5"/>
+      <text x="370" y="84" text-anchor="middle" font-family="Poppins,sans-serif" font-size="7" fill="#DDDDD6">R</text>
+      <circle cx="340" cy="115" r="10" fill="#454C2E" stroke="#707C5B" stroke-width="1.5"/>
+      <text x="340" y="119" text-anchor="middle" font-family="Poppins,sans-serif" font-size="7" fill="#DDDDD6">R</text>
+      <line x1="320" y1="85" x2="360" y2="80" stroke="#707C5B" stroke-width="1"/>
+      <line x1="315" y1="92" x2="335" y2="108" stroke="#707C5B" stroke-width="1"/>
+      <line x1="365" y1="88" x2="348" y2="108" stroke="#707C5B" stroke-width="1"/>
+      <!-- End systems left -->
+      <rect x="30" y="20" width="70" height="40" rx="6" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1"/>
+      <text x="65" y="38" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#DDDDD6">Home</text>
+      <text x="65" y="52" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#707C5B">Network</text>
+      <rect x="30" y="80" width="70" height="40" rx="6" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1"/>
+      <text x="65" y="98" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#DDDDD6">Mobile</text>
+      <text x="65" y="112" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#707C5B">Network</text>
+      <rect x="30" y="140" width="70" height="40" rx="6" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1"/>
+      <text x="65" y="158" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#DDDDD6">Enterprise</text>
+      <text x="65" y="172" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#707C5B">Network</text>
+      <!-- End systems right -->
+      <rect x="600" y="20" width="70" height="40" rx="6" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1"/>
+      <text x="635" y="38" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#DDDDD6">Datacenter</text>
+      <text x="635" y="52" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#707C5B">Network</text>
+      <rect x="600" y="80" width="70" height="40" rx="6" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1"/>
+      <text x="635" y="98" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#DDDDD6">Content</text>
+      <text x="635" y="112" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#707C5B">Provider</text>
+      <rect x="600" y="140" width="70" height="40" rx="6" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1"/>
+      <text x="635" y="158" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#DDDDD6">Global</text>
+      <text x="635" y="172" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#707C5B">ISP</text>
+      <!-- Connection lines to cloud -->
+      <line x1="100" y1="40" x2="158" y2="85" stroke="#707C5B" stroke-width="1.2" stroke-dasharray="4,3"/>
+      <line x1="100" y1="100" x2="152" y2="100" stroke="#707C5B" stroke-width="1.2" stroke-dasharray="4,3"/>
+      <line x1="100" y1="160" x2="158" y2="125" stroke="#707C5B" stroke-width="1.2" stroke-dasharray="4,3"/>
+      <line x1="600" y1="40" x2="544" y2="82" stroke="#707C5B" stroke-width="1.2" stroke-dasharray="4,3"/>
+      <line x1="600" y1="100" x2="550" y2="100" stroke="#707C5B" stroke-width="1.2" stroke-dasharray="4,3"/>
+      <line x1="600" y1="160" x2="544" y2="122" stroke="#707C5B" stroke-width="1.2" stroke-dasharray="4,3"/>
+      <text x="350" y="180" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#454C2E">Billions of hosts · Packet switches · Communication links · Protocols</text>
+    </svg>`,
+    content: `
+      <h1>Chapter 1: Introduction to Computer Networking</h1>
+      <p>This foundational chapter gives you the "big picture" — what the Internet is, how it works at a high level, and the terminology you'll use throughout the course.</p>
+
+      <h2>1.1 What Is the Internet?</h2>
+      <p>The Internet can be described in two ways:</p>
+      <ul>
+        <li><strong>Nuts and bolts view:</strong> Billions of connected computing devices called <strong>hosts</strong> or <strong>end systems</strong>, connected by a network of <strong>communication links</strong> (fiber, copper, radio, satellite) and <strong>packet switches</strong> (routers and link-layer switches). Networks are collections of devices and links managed by an organization.</li>
+        <li><strong>Services view:</strong> An infrastructure that provides services to distributed applications (Web, email, streaming, games, social media). Applications run on end systems and use a <strong>socket interface</strong> — a set of rules that tells the sending app how to deliver data to the receiving app.</li>
+      </ul>
+
+      <div class="callout"><strong>Key insight:</strong> Internet standards are defined by <strong>RFCs</strong> (Requests for Comments) published by the <strong>IETF</strong> (Internet Engineering Task Force). Every protocol you'll study — HTTP, TCP, IP — has an RFC.</div>
+
+      <h2>1.2 What Is a Protocol?</h2>
+      <p>A protocol defines the <strong>format</strong>, <strong>order</strong> of messages sent and received among network entities, and the <strong>actions</strong> taken on transmission, receipt, or other events. Think of it like a conversation script — the rules for who speaks when and how.</p>
+
+      <div class="img-row">
+        <div class="img-badge"><span class="big">📜</span>RFC<br>Protocol Standard</div>
+        <div class="img-badge"><span class="big">🤝</span>Handshake<br>Connection Setup</div>
+        <div class="img-badge"><span class="big">🔄</span>Request/Reply<br>Message Exchange</div>
+        <div class="img-badge"><span class="big">⚡</span>Error Handling<br>Exception Rules</div>
+      </div>
+
+      <h2>1.3 Network Edge &amp; Core</h2>
+      <p>The Internet has three layers of structure:</p>
+      <div class="concept-grid">
+        <div class="concept-card"><div class="cc-title">Network Edge</div><div class="cc-body">End systems (hosts, clients, servers). Servers often reside in large data centers. Access networks connect hosts to the first router (DSL, cable, fiber, WiFi, 4G/5G).</div></div>
+        <div class="concept-card"><div class="cc-title">Access Networks</div><div class="cc-body">DSL: 24–52 Mbps down, uses existing phone line. Cable HFC: up to 1.2 Gbps down, shared neighborhood line. Fiber (FTTH): direct fiber to home, fastest. WiFi 802.11ax: up to 14 Gbps. 4G/5G: mobile broadband.</div></div>
+        <div class="concept-card"><div class="cc-title">Network Core</div><div class="cc-body">Mesh of interconnected routers. Two switching approaches: packet switching (Internet) vs circuit switching (traditional telephone). Uses store-and-forward transmission.</div></div>
+      </div>
+
+      <h2>1.4 Packet Switching vs Circuit Switching</h2>
+      <table class="ntable">
+        <tr><th>Feature</th><th>Packet Switching</th><th>Circuit Switching</th></tr>
+        <tr><td>Resource allocation</td><td>On demand, no reservation</td><td>Pre-reserved, dedicated</td></tr>
+        <tr><td>Bandwidth use</td><td>Shared (statistical multiplexing)</td><td>Dedicated slice (FDM/TDM)</td></tr>
+        <tr><td>Congestion possible?</td><td>Yes — causes delay &amp; loss</td><td>No — guaranteed rate</td></tr>
+        <tr><td>Efficiency</td><td>Higher for bursty traffic</td><td>Wasteful for bursty traffic</td></tr>
+        <tr><td>Example</td><td>Internet</td><td>PSTN (traditional phone)</td></tr>
+      </table>
+
+      <div class="callout"><strong>Store-and-forward:</strong> A router must receive the entire packet before forwarding it. For an L-bit packet over R bps link: transmission delay = L/R. With N links: end-to-end delay = N·L/R (ignoring other delays).</div>
+
+      <h2>1.5 Internet Structure: Network of Networks</h2>
+      <p>End users connect to <strong>access ISPs</strong>. Access ISPs connect to <strong>regional ISPs</strong> → <strong>national/global ISPs (Tier-1)</strong>. Content providers (Google, Netflix) build their own global networks. An <strong>IXP</strong> (Internet Exchange Point) lets ISPs interconnect. This creates a hierarchical but meshed structure — the "network of networks."</p>
+
+      <h2>1.6 Delay, Loss, and Throughput</h2>
+      <p>Four sources of delay at every router node:</p>
+      <div class="concept-grid">
+        <div class="concept-card"><div class="cc-title">Processing Delay</div><div class="cc-body">Time to examine packet header and determine output link. Typically microseconds. Includes error checking.</div></div>
+        <div class="concept-card"><div class="cc-title">Queuing Delay</div><div class="cc-body">Wait time in router queue. Depends on traffic intensity (La/R where L=packet bits, a=arrival rate, R=link rate). High traffic → long queues → high delay.</div></div>
+        <div class="concept-card"><div class="cc-title">Transmission Delay</div><div class="cc-body">Time to push all packet bits onto the link. = L/R (packet size ÷ link bandwidth). A 1Mb packet on a 1Mbps link = 1 second.</div></div>
+        <div class="concept-card"><div class="cc-title">Propagation Delay</div><div class="cc-body">Time for signal to travel from sender to receiver. = d/s (distance ÷ propagation speed, ~2×10⁸ m/s in fiber). Independent of bandwidth.</div></div>
+      </div>
+
+      <p><strong>Packet loss:</strong> When a queue is full, arriving packets are dropped. Loss rate depends on traffic intensity. Lost packets must be retransmitted.</p>
+      <p><strong>Throughput:</strong> Rate (bits/time) at which bits are transferred. Determined by the <strong>bottleneck link</strong> — the link with the lowest rate along the path. Formula: min(R₁, R₂, …, Rₙ).</p>
+
+      <h2>1.7 Protocol Layers and Service Models</h2>
+      <p>The Internet uses a <strong>5-layer model</strong> (TCP/IP) while the theoretical <strong>OSI model</strong> has 7 layers. Each layer provides a service to the layer above and uses services from the layer below.</p>
+
+      <table class="ntable">
+        <tr><th>Layer</th><th>Unit</th><th>Key Protocols</th><th>Function</th></tr>
+        <tr><td>Application</td><td>Message</td><td>HTTP, DNS, SMTP, FTP</td><td>Network apps for end users</td></tr>
+        <tr><td>Transport</td><td>Segment</td><td>TCP, UDP</td><td>Process-to-process delivery</td></tr>
+        <tr><td>Network</td><td>Datagram</td><td>IP, ICMP, OSPF, BGP</td><td>Host-to-host routing</td></tr>
+        <tr><td>Link</td><td>Frame</td><td>Ethernet, WiFi, ARP</td><td>Node-to-node transfer</td></tr>
+        <tr><td>Physical</td><td>Bits</td><td>DSL, fiber, coax, radio</td><td>Bit transmission on medium</td></tr>
+      </table>
+
+      <div class="callout"><strong>Encapsulation:</strong> Each layer adds its own header (and sometimes trailer) to the data passed down. Application message → Transport adds Th → Network adds Nh → Link adds Lh+Lt. At receiver, headers are stripped as data moves up. This is encapsulation.</div>
+
+      <h2>1.8 Network Security</h2>
+      <p>The Internet was originally designed without security. Common attacks include:</p>
+      <ul>
+        <li><strong>Malware:</strong> Viruses (user activated), worms (self-replicating), ransomware, spyware. Botnet = network of compromised devices used for DDoS.</li>
+        <li><strong>Denial of Service (DoS):</strong> Overwhelm resource with bogus traffic. Distributed DoS (DDoS) uses botnets.</li>
+        <li><strong>Packet sniffing:</strong> Passive capture of packets on a shared medium (Wireshark).</li>
+        <li><strong>IP spoofing:</strong> Injecting packets with false source IP addresses.</li>
+      </ul>
+
+      <h3>Key Takeaways</h3>
+      <ul>
+        <li>The Internet is a "network of networks" — hierarchical ISP structure with IXPs for peering</li>
+        <li>Packet switching is more efficient than circuit switching for bursty data traffic</li>
+        <li>End-to-end delay = processing + queuing + transmission + propagation delays at each hop</li>
+        <li>Throughput is limited by the bottleneck (slowest) link along the path</li>
+        <li>The layered protocol model allows independent development of each layer</li>
+        <li>Encapsulation means each layer wraps the data with its own header before passing down</li>
+      </ul>
+    `
+  },
+  {
+    num: 2,
+    title: "Application Layer",
+    badge: "HTTP · DNS · SMTP · Sockets · P2P · CDN",
+    tags: ["HTTP/1.1","HTTP/2","HTTP/3","DNS","SMTP","IMAP","FTP","BitTorrent","CDN","Cookie","WebSocket","QUIC"],
+    illustration: `<svg viewBox="0 0 700 190" xmlns="http://www.w3.org/2000/svg">
+      <rect width="700" height="190" fill="#141810"/>
+      <!-- Client -->
+      <rect x="30" y="60" width="110" height="80" rx="10" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1.5"/>
+      <text x="85" y="95" text-anchor="middle" font-family="Poppins,sans-serif" font-size="11" fill="#DDDDD6" font-weight="600">Client</text>
+      <text x="85" y="112" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#707C5B">Browser/App</text>
+      <text x="85" y="128" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#454C2E">Port e.g. 54321</text>
+      <!-- Server -->
+      <rect x="560" y="60" width="110" height="80" rx="10" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1.5"/>
+      <text x="615" y="95" text-anchor="middle" font-family="Poppins,sans-serif" font-size="11" fill="#DDDDD6" font-weight="600">Server</text>
+      <text x="615" y="112" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#707C5B">Web/Email/DNS</text>
+      <text x="615" y="128" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#454C2E">Port 80/443/25/53</text>
+      <!-- HTTP messages -->
+      <rect x="185" y="55" width="330" height="28" rx="6" fill="rgba(69,76,46,0.3)" stroke="#707C5B" stroke-width="1"/>
+      <text x="350" y="72" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#B5BEB2">GET /index.html HTTP/1.1   →</text>
+      <rect x="185" y="110" width="330" height="28" rx="6" fill="rgba(69,76,46,0.3)" stroke="#707C5B" stroke-width="1"/>
+      <text x="350" y="127" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#B5BEB2">← HTTP/1.1 200 OK + HTML body</text>
+      <!-- DNS label -->
+      <rect x="245" y="155" width="210" height="26" rx="6" fill="rgba(112,124,91,0.15)" stroke="#454C2E" stroke-width="1"/>
+      <text x="350" y="171" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#707C5B">DNS: domain → IP address resolution</text>
+      <!-- Arrows -->
+      <polygon points="505,62 511,69 499,69" fill="#707C5B"/>
+      <polygon points="195,117 189,124 201,124" fill="#B5BEB2"/>
+    </svg>`,
+    content: `
+      <h1>Chapter 2: Application Layer</h1>
+      <p>The application layer is where network apps live. It defines the protocols that applications use to communicate over the network — and it's the layer you interact with every day.</p>
+
+      <h2>2.1 Principles of Network Applications</h2>
+      <p>Network apps run on <strong>end systems</strong> — not on routers or switches in the core. This allowed the explosive growth of the Internet: developers only need to write software for end systems.</p>
+
+      <div class="concept-grid">
+        <div class="concept-card"><div class="cc-title">Client-Server Paradigm</div><div class="cc-body">Server: always-on host with permanent IP, often in datacenters. Client: contacts server, may be intermittent. Clients don't talk directly to each other. Examples: HTTP, SMTP, FTP.</div></div>
+        <div class="concept-card"><div class="cc-title">Peer-to-Peer (P2P)</div><div class="cc-body">No always-on server. Peers (arbitrary end systems) communicate directly. Self-scaling: new peers add both demand AND capacity. Example: BitTorrent. Challenge: management complexity, churn.</div></div>
+        <div class="concept-card"><div class="cc-title">Processes &amp; Sockets</div><div class="cc-body">A process is a running program. The socket is the API between the app and the transport layer — like a door. Identifier = IP address + port number. HTTP=80, HTTPS=443, SMTP=25, DNS=53.</div></div>
+        <div class="concept-card"><div class="cc-title">Transport Needs</div><div class="cc-body">Apps need: data integrity (no loss) or loss tolerance, timing (low latency) or not, throughput minimum or elastic, security. TCP provides reliability; UDP is bare-metal fast.</div></div>
+      </div>
+
+      <h2>2.2 The Web and HTTP</h2>
+      <p>HTTP (HyperText Transfer Protocol) is a client-server protocol. A web page = base HTML + referenced objects (images, JS, CSS). Each object is addressed by a URL.</p>
+
+      <div class="callout"><strong>Stateless:</strong> HTTP servers maintain no information about past client requests. This simplifies design but requires <strong>cookies</strong> for state (session IDs, shopping carts) and <strong>web caches</strong> for performance.</div>
+
+      <table class="ntable">
+        <tr><th>HTTP Version</th><th>Connection</th><th>Key Innovation</th></tr>
+        <tr><td>HTTP/1.0</td><td>Non-persistent</td><td>New TCP connection per object; 2 RTTs + file transfer time per object</td></tr>
+        <tr><td>HTTP/1.1</td><td>Persistent (default)</td><td>Multiple objects over same TCP connection; pipelining sends without waiting for reply</td></tr>
+        <tr><td>HTTP/2</td><td>Persistent + multiplexed</td><td>Multiple requests/responses interleaved in same TCP connection; header compression; server push</td></tr>
+        <tr><td>HTTP/3</td><td>QUIC (UDP-based)</td><td>TLS built in; per-stream loss recovery eliminates head-of-line blocking</td></tr>
+      </table>
+
+      <p><strong>HTTP Request Message structure:</strong></p>
+      <div class="code-block">GET /somedir/page.html HTTP/1.1\r\n
+Host: www.someschool.edu\r\n
+User-Agent: Mozilla/5.0\r\n
+Connection: close\r\n
+\r\n</div>
+
+      <p><strong>HTTP Response Status Codes:</strong> 200 OK · 301 Moved Permanently · 304 Not Modified · 400 Bad Request · 404 Not Found · 505 HTTP Version Not Supported</p>
+
+      <h2>2.3 Cookies and Web Caches</h2>
+      <ul>
+        <li><strong>Cookies:</strong> Server sends Set-cookie header → browser stores cookie → browser sends Cookie header on future requests. Used for authentication, personalization, tracking. Privacy concern: third-party tracking cookies.</li>
+        <li><strong>Web caches (proxy server):</strong> Satisfies HTTP requests without contacting origin server. Uses conditional GET (If-Modified-Since header). Reduces response time AND traffic on ISP access links. CDNs are geographically distributed caches.</li>
+        <li><strong>Cache performance:</strong> If hit rate is 40%, access link utilization drops dramatically. Formula: Δ = (1 - hitRate) × originDelay + hitRate × cacheDelay.</li>
+      </ul>
+
+      <h2>2.4 Email: SMTP and IMAP</h2>
+      <div class="concept-grid">
+        <div class="concept-card"><div class="cc-title">SMTP (RFC 5321)</div><div class="cc-body">Push protocol — sender's mail server pushes to receiver's server over TCP port 25. Direct delivery, persistent connections. Uses CRLF for lines, "." alone on line = end of message. ASCII-based handshake: HELO, MAIL FROM, RCPT TO, DATA.</div></div>
+        <div class="concept-card"><div class="cc-title">IMAP (RFC 3501)</div><div class="cc-body">Pull protocol — user agent retrieves from mail server. Maintains folders on server. Keeps messages there for multi-device access. IMAP vs POP3: IMAP server-side folders; POP3 downloads &amp; deletes.</div></div>
+        <div class="concept-card"><div class="cc-title">MIME Extensions</div><div class="cc-body">SMTP originally ASCII only. MIME (Multipurpose Internet Mail Extensions) adds Content-Type headers to allow binary attachments, non-ASCII text. Base64 encoding for binary in ASCII.</div></div>
+      </div>
+
+      <h2>2.5 DNS — The Domain Name System</h2>
+      <p>DNS translates human-readable hostnames (www.google.com) to IP addresses (142.250.x.x). It's a distributed, hierarchical database — not a central server.</p>
+
+      <div class="concept-grid">
+        <div class="concept-card"><div class="cc-title">DNS Hierarchy</div><div class="cc-body">Root DNS servers (13 logical, hundreds physical) → Top-Level Domain (TLD: .com, .org, .edu) → Authoritative DNS servers. Local DNS server = default resolver, provided by ISP.</div></div>
+        <div class="concept-card"><div class="cc-title">Iterative vs Recursive</div><div class="cc-body">Iterative: local server queries root → TLD → authoritative, then returns IP. Recursive: local asks root, root asks TLD, TLD asks authoritative, reply chains back. Iterative is standard.</div></div>
+        <div class="concept-card"><div class="cc-title">DNS Records (RR)</div><div class="cc-body">Type A: hostname → IPv4. Type AAAA: hostname → IPv6. Type NS: domain → authoritative server name. Type CNAME: alias → canonical name. Type MX: mail server for domain.</div></div>
+        <div class="concept-card"><div class="cc-title">DNS Caching</div><div class="cc-body">Local DNS server caches responses with TTL (Time-To-Live). Cached TLD servers reduce root server load. TTL typical: 48 hours. If DNS entry changes, wait for TTL expiry across all caches.</div></div>
+      </div>
+
+      <div class="callout"><strong>DNS uses UDP port 53</strong> by default (fast, low overhead). TCP port 53 is used for zone transfers (copying entire DNS zone between servers) and large replies.</div>
+
+      <h2>2.6 Video Streaming and CDNs</h2>
+      <p>Video is 80%+ of Internet traffic. Key challenge: serving millions of concurrent streams of high-bitrate video.</p>
+      <ul>
+        <li><strong>DASH (Dynamic Adaptive Streaming over HTTP):</strong> Video encoded at multiple bitrates and chunk sizes. Client periodically measures available bandwidth and requests the appropriate quality chunk. Client is intelligent — server is simple.</li>
+        <li><strong>CDN (Content Distribution Network):</strong> Geographically distributed servers storing copies of content. Examples: Akamai, Cloudflare, Google. Two strategies: Enter Deep (many small clusters close to users) vs Bring Home (fewer large clusters at IXPs).</li>
+        <li><strong>Netflix uses AWS + Open Connect:</strong> Content stored in Amazon S3 → transcoded → pushed to Open Connect appliances (OCA) in ISP networks worldwide. Client requests routed to nearest OCA.</li>
+      </ul>
+
+      <h2>2.7 Socket Programming</h2>
+      <p>Sockets are the API between the application and the transport layer. Two types:</p>
+      <ul>
+        <li><strong>UDP Socket:</strong> No connection needed. App attaches destination IP+port to each packet. Receiver must extract sender info. No handshake. Fast but unreliable.</li>
+        <li><strong>TCP Socket:</strong> Client connects to server (3-way handshake). Creates new socket for each connection — server has two sockets: welcome socket (for connections) and connection socket (per client). Reliable, ordered byte stream.</li>
+      </ul>
+
+      <h3>Key Takeaways</h3>
+      <ul>
+        <li>HTTP is stateless — cookies add state management on top</li>
+        <li>HTTP/2 multiplexing and HTTP/3 (QUIC) solve HTTP/1.1's head-of-line blocking</li>
+        <li>DNS is a hierarchical distributed database; results are cached with TTL</li>
+        <li>SMTP pushes email; IMAP pulls it — they serve different phases of email delivery</li>
+        <li>DASH lets video streaming adapt quality to available bandwidth dynamically</li>
+        <li>CDNs store content close to users — reducing latency and ISP backbone traffic</li>
+        <li>Socket = API between app and transport; TCP needs connection setup, UDP doesn't</li>
+      </ul>
+    `
+  },
+  {
+    num: 3,
+    title: "Transport Layer",
+    badge: "TCP · UDP · Multiplexing · Congestion Control · Flow Control",
+    tags: ["TCP","UDP","Multiplexing","3-Way Handshake","Slow Start","AIMD","CUBIC","QUIC","ARQ","Sliding Window"],
+    illustration: `<svg viewBox="0 0 700 190" xmlns="http://www.w3.org/2000/svg">
+      <rect width="700" height="190" fill="#141810"/>
+      <!-- Sender -->
+      <rect x="20" y="30" width="100" height="130" rx="8" fill="rgba(69,76,46,0.3)" stroke="#454C2E" stroke-width="1.5"/>
+      <text x="70" y="52" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#B5BEB2" font-weight="600">Sender</text>
+      <rect x="30" y="60" width="80" height="18" rx="4" fill="rgba(112,124,91,0.4)"/>
+      <text x="70" y="73" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#DDDDD6">App Message</text>
+      <rect x="30" y="85" width="80" height="18" rx="4" fill="rgba(112,124,91,0.3)"/>
+      <text x="70" y="98" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#DDDDD6">+ Th (header)</text>
+      <rect x="30" y="110" width="80" height="18" rx="4" fill="rgba(69,76,46,0.4)"/>
+      <text x="70" y="123" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#DDDDD6">Segment</text>
+      <text x="70" y="150" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#454C2E">to IP layer ↓</text>
+      <!-- Receiver -->
+      <rect x="580" y="30" width="100" height="130" rx="8" fill="rgba(69,76,46,0.3)" stroke="#454C2E" stroke-width="1.5"/>
+      <text x="630" y="52" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#B5BEB2" font-weight="600">Receiver</text>
+      <rect x="590" y="60" width="80" height="18" rx="4" fill="rgba(69,76,46,0.4)"/>
+      <text x="630" y="73" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#DDDDD6">Segment</text>
+      <rect x="590" y="85" width="80" height="18" rx="4" fill="rgba(112,124,91,0.3)"/>
+      <text x="630" y="98" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#DDDDD6">Strip Th</text>
+      <rect x="590" y="110" width="80" height="18" rx="4" fill="rgba(112,124,91,0.4)"/>
+      <text x="630" y="123" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#DDDDD6">App Message</text>
+      <text x="630" y="150" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#454C2E">↑ to app socket</text>
+      <!-- Network cloud -->
+      <ellipse cx="350" cy="95" rx="165" ry="55" fill="rgba(69,76,46,0.12)" stroke="#454C2E" stroke-width="1" stroke-dasharray="5,3"/>
+      <text x="350" y="88" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#707C5B">Network Layer (IP)</text>
+      <text x="350" y="103" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#454C2E">Best-effort delivery</text>
+      <!-- TCP/UDP label -->
+      <text x="350" y="165" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#B5BEB2">TCP: reliable | ordered | flow+congestion control</text>
+      <text x="350" y="180" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#707C5B">UDP: fast | connectionless | no guarantees</text>
+      <!-- Arrows -->
+      <line x1="120" y1="95" x2="185" y2="95" stroke="#707C5B" stroke-width="2"/>
+      <polygon points="185,90 195,95 185,100" fill="#707C5B"/>
+      <line x1="515" y1="95" x2="580" y2="95" stroke="#707C5B" stroke-width="2"/>
+      <polygon points="515,90 505,95 515,100" fill="#707C5B"/>
+    </svg>`,
+    content: `
+      <h1>Chapter 3: Transport Layer</h1>
+      <p>The transport layer provides logical communication between <em>processes</em> running on different hosts (not hosts themselves — that's the network layer). It's where TCP and UDP live.</p>
+
+      <h2>3.1 Transport Layer Services</h2>
+      <p>The transport layer extends the network layer's host-to-host delivery to <strong>process-to-process delivery</strong>. It breaks app messages into <strong>segments</strong>, adds a header, and passes to the network layer. At the receiver, it reassembles segments and delivers to the right socket.</p>
+
+      <div class="callout"><strong>Analogy:</strong> Imagine 12 kids in Ann's house writing to 12 kids in Bill's house. The postal service (network layer) delivers the letters house-to-house. Ann and Bill (transport layer) sort the letters to the right kids (processes) inside each house.</div>
+
+      <h2>3.2 Multiplexing &amp; Demultiplexing</h2>
+      <ul>
+        <li><strong>Multiplexing (sender):</strong> Gather data from multiple sockets, add transport headers (src/dest port), create segments, pass to network layer.</li>
+        <li><strong>Demultiplexing (receiver):</strong> Examine segment headers (dest port) to deliver data to the correct socket.</li>
+        <li><strong>UDP demux:</strong> Uses only dest IP + dest port. All UDP segments to same dest port go to same socket.</li>
+        <li><strong>TCP demux:</strong> Uses 4-tuple (src IP, src port, dest IP, dest port). Each TCP connection has its own socket — allows many clients to connect to port 80 simultaneously.</li>
+      </ul>
+
+      <h2>3.3 Connectionless Transport: UDP</h2>
+      <p>UDP (User Datagram Protocol) adds only multiplexing/demultiplexing and error detection (checksum) on top of IP. No connection setup, no reliability, no ordering.</p>
+
+      <table class="ntable">
+        <tr><th>UDP Header Field</th><th>Size</th><th>Purpose</th></tr>
+        <tr><td>Source Port</td><td>16 bits</td><td>Port of sending process</td></tr>
+        <tr><td>Dest Port</td><td>16 bits</td><td>Port of receiving process</td></tr>
+        <tr><td>Length</td><td>16 bits</td><td>Length of segment (header + data)</td></tr>
+        <tr><td>Checksum</td><td>16 bits</td><td>Error detection (one's complement sum)</td></tr>
+      </table>
+
+      <p><strong>Why use UDP?</strong> No connection setup delay. No connection state → server handles more clients. Small header (8 bytes vs TCP 20+). Application controls sending rate. Used by DNS, DHCP, streaming media, online games, VoIP, QUIC.</p>
+
+      <h2>3.4 Principles of Reliable Data Transfer (RDT)</h2>
+      <p>Building reliability over an unreliable channel requires:</p>
+      <div class="concept-grid">
+        <div class="concept-card"><div class="cc-title">Error Detection</div><div class="cc-body">Checksums detect bit flips. Receiver can detect (and maybe correct) corrupted packets.</div></div>
+        <div class="concept-card"><div class="cc-title">Acknowledgments (ACK)</div><div class="cc-body">Receiver explicitly confirms correct receipt. Negative ACK (NAK) signals error. TCP uses cumulative ACKs.</div></div>
+        <div class="concept-card"><div class="cc-title">Retransmission</div><div class="cc-body">Sender retransmits on NAK or timeout. Sequence numbers distinguish original from retransmit, and handle duplicates.</div></div>
+        <div class="concept-card"><div class="cc-title">Pipelining</div><div class="cc-body">Send multiple unACKed packets. Dramatically improves utilization. Two approaches: Go-Back-N (retransmit from lost) or Selective Repeat (retransmit only lost).</div></div>
+      </div>
+
+      <h2>3.5 Connection-Oriented Transport: TCP</h2>
+      <p>TCP provides: reliable, in-order byte stream delivery, flow control, congestion control, and connection setup.</p>
+
+      <div class="callout"><strong>TCP Segment Header Key Fields:</strong> Source/Dest Port (16b each) · Sequence Number (32b) · Acknowledgment Number (32b) · Header Length (4b) · Flags: URG, ACK, PSH, RST, SYN, FIN · Receive Window (16b) · Checksum (16b) · Urgent Data Pointer (16b)</div>
+
+      <h2>3.5.1 TCP Connection Management</h2>
+      <p>TCP uses a <strong>3-way handshake</strong> to establish and <strong>4-way handshake</strong> to close:</p>
+      <div class="code-block">Establish:                     Close:
+Client → SYN               Client → FIN
+Server → SYN-ACK           Server → ACK
+Client → ACK               Server → FIN
+                           Client → ACK (2 min wait)</div>
+
+      <h2>3.5.2 Flow Control</h2>
+      <p>Prevents sender from overwhelming receiver's buffer. Receiver advertises <strong>receive window (rwnd)</strong> = available buffer space. Sender limits unACKed data to rwnd bytes. If rwnd = 0, sender sends 1-byte probes periodically.</p>
+
+      <h2>3.5.3 TCP Congestion Control</h2>
+      <p>Prevents sender from overwhelming the <em>network</em>. TCP infers congestion from packet loss (timeout or 3 duplicate ACKs). Controls <strong>congestion window (cwnd)</strong>.</p>
+
+      <table class="ntable">
+        <tr><th>Phase</th><th>Behavior</th><th>Growth Rate</th></tr>
+        <tr><td>Slow Start</td><td>cwnd starts at 1 MSS, doubles every RTT</td><td>Exponential</td></tr>
+        <tr><td>Congestion Avoidance</td><td>cwnd &gt; ssthresh; increase by 1 MSS per RTT</td><td>Linear (AIMD additive)</td></tr>
+        <tr><td>Loss (timeout)</td><td>ssthresh = cwnd/2; cwnd = 1; restart slow start</td><td>Reset to 1</td></tr>
+        <tr><td>Loss (3 dup ACKs)</td><td>ssthresh = cwnd/2; cwnd = ssthresh; fast retransmit</td><td>Halve (AIMD multiplicative)</td></tr>
+      </table>
+
+      <div class="callout"><strong>TCP CUBIC</strong> (default in Linux) uses a cubic function to probe for bandwidth faster after loss recovery — more aggressive on high-bandwidth, high-latency links. <strong>TCP BBR</strong> models bottleneck bandwidth and RTT directly, avoids queue buildup entirely.</div>
+
+      <h2>3.6 Evolution: QUIC</h2>
+      <p>QUIC (Quick UDP Internet Connections) is a transport protocol built on UDP, developed by Google, now standardized (RFC 9000). Used in HTTP/3. Key improvements:</p>
+      <ul>
+        <li><strong>0-RTT connection:</strong> First request can be sent immediately on reconnect (session resumption).</li>
+        <li><strong>TLS 1.3 built in:</strong> Encryption is mandatory; no plaintext QUIC.</li>
+        <li><strong>Stream multiplexing:</strong> Multiple independent streams in one connection; loss in one stream doesn't block others (no head-of-line blocking like TCP).</li>
+        <li><strong>Connection migration:</strong> Connection can move between networks (WiFi → 4G) without reconnection using Connection ID instead of 4-tuple.</li>
+      </ul>
+
+      <h3>Key Takeaways</h3>
+      <ul>
+        <li>Transport layer adds port numbers on top of IP's host addresses → process-to-process delivery</li>
+        <li>UDP: fast, no setup, no reliability — good for real-time apps that can tolerate loss</li>
+        <li>TCP: reliable, ordered, with flow &amp; congestion control — uses 3-way handshake</li>
+        <li>TCP sequence/ACK numbers enable reliable delivery over unreliable IP</li>
+        <li>Flow control (rwnd) prevents receiver overflow; congestion control (cwnd) prevents network overflow</li>
+        <li>TCP AIMD: additive increase on success, multiplicative decrease on loss — fair &amp; efficient</li>
+        <li>QUIC (HTTP/3) solves TCP's head-of-line blocking by multiplexing over UDP</li>
+      </ul>
+    `
+  },
+  {
+    num: 4,
+    title: "Network Layer: Data Plane",
+    badge: "IP · Routing · NAT · IPv6 · OpenFlow · SDN",
+    tags: ["IPv4","IPv6","NAT","CIDR","Longest Prefix Match","DHCP","Fragmentation","OpenFlow","Middlebox","SDN"],
+    illustration: `<svg viewBox="0 0 700 190" xmlns="http://www.w3.org/2000/svg">
+      <rect width="700" height="190" fill="#141810"/>
+      <!-- Router box -->
+      <rect x="245" y="30" width="210" height="130" rx="12" fill="rgba(69,76,46,0.3)" stroke="#707C5B" stroke-width="1.5"/>
+      <text x="350" y="54" text-anchor="middle" font-family="Poppins,sans-serif" font-size="12" fill="#B5BEB2" font-weight="700">Router</text>
+      <!-- Forwarding table inside -->
+      <rect x="258" y="62" width="185" height="58" rx="6" fill="rgba(30,36,18,0.7)" stroke="#454C2E" stroke-width="1"/>
+      <text x="350" y="77" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#707C5B" font-weight="600">FORWARDING TABLE</text>
+      <text x="268" y="91" font-family="Poppins,sans-serif" font-size="8" fill="#B5BEB2">11001000 00010111 00010</text>
+      <text x="410" y="91" font-family="Poppins,sans-serif" font-size="8" fill="#707C5B"> → Port 0</text>
+      <text x="268" y="103" font-family="Poppins,sans-serif" font-size="8" fill="#B5BEB2">11001000 00010111 00011</text>
+      <text x="410" y="103" font-family="Poppins,sans-serif" font-size="8" fill="#707C5B"> → Port 1</text>
+      <text x="268" y="115" font-family="Poppins,sans-serif" font-size="8" fill="#B5BEB2">otherwise</text>
+      <text x="410" y="115" font-family="Poppins,sans-serif" font-size="8" fill="#707C5B"> → Port 2</text>
+      <text x="350" y="148" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#454C2E">Input → Switching Fabric → Output</text>
+      <!-- Incoming packets left -->
+      <rect x="40" y="55" width="100" height="22" rx="4" fill="rgba(112,124,91,0.3)" stroke="#454C2E" stroke-width="1"/>
+      <text x="90" y="70" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#DDDDD6">Datagram In</text>
+      <rect x="40" y="100" width="100" height="22" rx="4" fill="rgba(112,124,91,0.3)" stroke="#454C2E" stroke-width="1"/>
+      <text x="90" y="115" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#DDDDD6">Datagram In</text>
+      <!-- Outgoing packets right -->
+      <rect x="560" y="55" width="100" height="22" rx="4" fill="rgba(69,76,46,0.4)" stroke="#454C2E" stroke-width="1"/>
+      <text x="610" y="70" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#DDDDD6">→ Port 0</text>
+      <rect x="560" y="100" width="100" height="22" rx="4" fill="rgba(69,76,46,0.4)" stroke="#454C2E" stroke-width="1"/>
+      <text x="610" y="115" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#DDDDD6">→ Port 1</text>
+      <!-- IP datagram format at bottom -->
+      <rect x="60" y="162" width="580" height="20" rx="3" fill="rgba(69,76,46,0.25)" stroke="#454C2E" stroke-width="1"/>
+      <text x="350" y="175" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8.5" fill="#707C5B">IP Datagram: ver | len | ToS | total len | id | flags | frag offset | TTL | proto | chksum | src IP | dst IP | options | data</text>
+      <!-- Arrows -->
+      <line x1="140" y1="66" x2="245" y2="80" stroke="#707C5B" stroke-width="1.5"/>
+      <line x1="140" y1="111" x2="245" y2="100" stroke="#707C5B" stroke-width="1.5"/>
+      <line x1="455" y1="80" x2="560" y2="66" stroke="#707C5B" stroke-width="1.5"/>
+      <line x1="455" y1="100" x2="560" y2="111" stroke="#707C5B" stroke-width="1.5"/>
+    </svg>`,
+    content: `
+      <h1>Chapter 4: Network Layer — Data Plane</h1>
+      <p>The network layer moves datagrams from sending to receiving host. Every router and host runs network layer protocols. The <strong>data plane</strong> is the local, per-router forwarding function.</p>
+
+      <h2>4.1 Overview: Data Plane vs Control Plane</h2>
+      <div class="concept-grid">
+        <div class="concept-card"><div class="cc-title">Data Plane (Forwarding)</div><div class="cc-body">Local, per-router function. Determines how a datagram arriving on one input port is forwarded to the output port. Operates in nanoseconds using hardware. Uses the forwarding table.</div></div>
+        <div class="concept-card"><div class="cc-title">Control Plane (Routing)</div><div class="cc-body">Network-wide logic. Determines how the forwarding table is computed. Two approaches: traditional (distributed routing algorithms in routers) or SDN (centralized remote controller).</div></div>
+      </div>
+
+      <h2>4.2 What's Inside a Router?</h2>
+      <ul>
+        <li><strong>Input ports:</strong> Physical layer (bit reception) → Link layer (frame processing) → Decentralized switching using forwarding table copy → Output port queue for memory/HOL blocking.</li>
+        <li><strong>Switching fabric:</strong> Connects input to output ports. Three types: via memory (CPU copies, old/slow), via bus (shared bus, contention), via interconnection network (crossbar — parallel, scalable, used in modern routers).</li>
+        <li><strong>Output ports:</strong> Queue datagrams from switching fabric. Scheduling determines which queued datagram is transmitted next (FIFO, Priority, Round Robin, WFQ).</li>
+        <li><strong>Routing processor:</strong> Runs routing protocols, maintains routing/forwarding tables, network management. Software-based, ms timescale.</li>
+      </ul>
+
+      <div class="callout"><strong>Head-of-Line (HOL) Blocking:</strong> A queued datagram at the head of a queue blocks other datagrams behind it even if their output ports are free. This limits router throughput to ~58% of maximum. Solution: Virtual Output Queuing (VOQ).</div>
+
+      <h2>4.3 The Internet Protocol (IP)</h2>
+      <p>IP is the "thin waist" of the Internet — every layer above and below it is diverse, but IP is universal.</p>
+
+      <p><strong>IPv4 Datagram Header (20 bytes minimum):</strong></p>
+      <table class="ntable">
+        <tr><th>Field</th><th>Bits</th><th>Description</th></tr>
+        <tr><td>Version</td><td>4</td><td>IPv4 = 4</td></tr>
+        <tr><td>Header Length</td><td>4</td><td>In 32-bit words (usually 5 = 20 bytes)</td></tr>
+        <tr><td>ToS/DSCP</td><td>8</td><td>Quality of service differentiation</td></tr>
+        <tr><td>Total Length</td><td>16</td><td>Header + data in bytes, max 65,535</td></tr>
+        <tr><td>Identifier/Flags/Frag Offset</td><td>32</td><td>IP fragmentation support</td></tr>
+        <tr><td>TTL</td><td>8</td><td>Decremented at each router; drop at 0. Prevents loops.</td></tr>
+        <tr><td>Protocol</td><td>8</td><td>TCP=6, UDP=17, ICMP=1</td></tr>
+        <tr><td>Checksum</td><td>16</td><td>Header only (not data)</td></tr>
+        <tr><td>Source IP</td><td>32</td><td>Sender's IP address</td></tr>
+        <tr><td>Dest IP</td><td>32</td><td>Receiver's IP address</td></tr>
+      </table>
+
+      <h2>4.3.2 IPv4 Addressing</h2>
+      <ul>
+        <li><strong>32-bit address:</strong> Written as dotted decimal (192.168.1.1 = 11000000.10101000.00000001.00000001).</li>
+        <li><strong>Subnet:</strong> Device interfaces with same prefix. Subnet mask /n means first n bits are network prefix. E.g., 223.1.1.0/24 = 256 addresses.</li>
+        <li><strong>CIDR (Classless Inter-Domain Routing):</strong> Replaced class-based (A/B/C). a.b.c.d/x — x bits are subnet portion. Allows flexible allocation sizes. Enables route aggregation (supernetting).</li>
+        <li><strong>DHCP (Dynamic Host Configuration Protocol):</strong> Automatically assigns IP to new host. 4 steps: DHCP Discover (broadcast) → DHCP Offer → DHCP Request → DHCP ACK. Also provides default gateway, DNS server, subnet mask.</li>
+        <li><strong>NAT (Network Address Translation):</strong> One public IP for entire home/office. Router translates private (10.x, 172.16.x, 192.168.x) → public IP + port. NAT translation table maps (private IP, private port) → (public IP, new port). Controversial: violates layering, breaks end-to-end principle.</li>
+      </ul>
+
+      <div class="callout"><strong>Longest Prefix Match:</strong> Router matches destination IP to forwarding table entry with the longest matching prefix. E.g., address 11001000 00010111 00011000 10101010 matches /21 prefix before /16. Hardware uses TCAM for line-rate lookup.</div>
+
+      <h2>4.4 IPv6</h2>
+      <p>Motivation: IPv4's 32-bit address space exhausted (2011 for IANA pool, regional registries soon after).</p>
+      <ul>
+        <li><strong>128-bit addresses:</strong> 340 undecillion (3.4×10³⁸) addresses — effectively unlimited.</li>
+        <li><strong>Fixed 40-byte header:</strong> Simpler, faster processing. No checksum (IP), no fragmentation by routers (end systems fragment), no options (extension headers used instead).</li>
+        <li><strong>Flow label:</strong> 20-bit field to identify traffic flow for QoS.</li>
+        <li><strong>Transition from IPv4 to IPv6:</strong> Tunneling — IPv6 datagrams carried as payload of IPv4 datagrams between IPv4 routers (dual-stack). 6to4, Teredo, NAT64 are transition mechanisms. Adoption is slow (~50% of Google traffic as of 2025).</li>
+      </ul>
+
+      <h2>4.5 Generalized Forwarding and SDN</h2>
+      <p>Traditional forwarding matches only on destination IP. <strong>Generalized forwarding</strong> (OpenFlow) matches on any header field and can forward, drop, modify, or send to controller.</p>
+      <ul>
+        <li><strong>Match+Action:</strong> Flow table entries: match header fields (src/dest IP, port, MAC, etc.) → action (forward to port, flood, drop, modify, send to controller).</li>
+        <li><strong>OpenFlow:</strong> Protocol between SDN controller and switches. Controller installs flow table entries. Enables flexible network programmability.</li>
+        <li><strong>Middleboxes:</strong> NAT boxes, firewalls, IDS, load balancers — devices between source and dest that process packets. Modern SDN integrates middlebox functions into the forwarding plane.</li>
+      </ul>
+
+      <h3>Key Takeaways</h3>
+      <ul>
+        <li>Forwarding (data plane) = local, hardware-speed table lookup; Routing (control plane) = network-wide algorithm</li>
+        <li>IPv4 header: TTL prevents routing loops; Protocol field identifies transport layer; checksum is header-only</li>
+        <li>CIDR + longest prefix match allows flexible, efficient address allocation and routing</li>
+        <li>DHCP assigns IPs dynamically; NAT lets many devices share one public IP</li>
+        <li>IPv6 has 128-bit addresses, no fragmentation by routers, and faster processing</li>
+        <li>OpenFlow enables match+action on any header field — the basis of SDN</li>
+      </ul>
+    `
+  },
+  {
+    num: 5,
+    title: "Network Layer: Control Plane",
+    badge: "OSPF · BGP · Dijkstra · Bellman-Ford · SDN · ICMP",
+    tags: ["Link-State","Distance Vector","OSPF","BGP","AS","ICMP","SDN","OpenFlow","SNMP","NETCONF"],
+    illustration: `<svg viewBox="0 0 700 190" xmlns="http://www.w3.org/2000/svg">
+      <rect width="700" height="190" fill="#141810"/>
+      <!-- AS1 -->
+      <ellipse cx="185" cy="90" rx="155" ry="68" fill="rgba(69,76,46,0.18)" stroke="#454C2E" stroke-width="1.5" stroke-dasharray="6,4"/>
+      <text x="70" y="30" font-family="Poppins,sans-serif" font-size="11" fill="#454C2E">AS 1 (OSPF)</text>
+      <circle cx="140" cy="80" r="16" fill="#454C2E" stroke="#707C5B" stroke-width="1.5"/>
+      <text x="140" y="84" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#DDDDD6">R1</text>
+      <circle cx="200" cy="110" r="16" fill="#454C2E" stroke="#707C5B" stroke-width="1.5"/>
+      <text x="200" y="114" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#DDDDD6">R2</text>
+      <circle cx="245" cy="75" r="16" fill="#454C2E" stroke="#B5BEB2" stroke-width="1.5"/>
+      <text x="245" y="79" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#DDDDD6">R3</text>
+      <line x1="156" y1="80" x2="229" y2="80" stroke="#707C5B" stroke-width="1"/>
+      <line x1="155" y1="88" x2="187" y2="106" stroke="#707C5B" stroke-width="1"/>
+      <line x1="215" y1="105" x2="235" y2="88" stroke="#707C5B" stroke-width="1"/>
+      <!-- BGP link -->
+      <line x1="261" y1="75" x2="439" y2="75" stroke="#B5BEB2" stroke-width="2" stroke-dasharray="8,4"/>
+      <text x="350" y="62" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#B5BEB2" font-weight="600">eBGP</text>
+      <!-- AS2 -->
+      <ellipse cx="510" cy="90" rx="150" ry="65" fill="rgba(69,76,46,0.2)" stroke="#454C2E" stroke-width="1.5" stroke-dasharray="6,4"/>
+      <text x="430" y="30" font-family="Poppins,sans-serif" font-size="11" fill="#454C2E">AS 2 (OSPF)</text>
+      <circle cx="455" cy="75" r="16" fill="#454C2E" stroke="#B5BEB2" stroke-width="1.5"/>
+      <text x="455" y="79" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#DDDDD6">R4</text>
+      <circle cx="510" cy="110" r="16" fill="#454C2E" stroke="#707C5B" stroke-width="1.5"/>
+      <text x="510" y="114" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#DDDDD6">R5</text>
+      <circle cx="560" cy="80" r="16" fill="#454C2E" stroke="#707C5B" stroke-width="1.5"/>
+      <text x="560" y="84" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#DDDDD6">R6</text>
+      <line x1="471" y1="78" x2="544" y2="78" stroke="#707C5B" stroke-width="1"/>
+      <line x1="466" y1="88" x2="497" y2="106" stroke="#707C5B" stroke-width="1"/>
+      <line x1="526" y1="105" x2="547" y2="88" stroke="#707C5B" stroke-width="1"/>
+      <text x="350" y="165" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#707C5B">OSPF within AS (link-state) · BGP between ASes (path-vector) · SDN centralizes control</text>
+    </svg>`,
+    content: `
+      <h1>Chapter 5: Network Layer — Control Plane</h1>
+      <p>While the data plane forwards packets, the control plane <em>computes</em> the forwarding tables. This chapter covers routing algorithms, OSPF, BGP, SDN, ICMP, and network management.</p>
+
+      <h2>5.1 Routing Algorithms</h2>
+      <p>Goal: find the "least cost" path (by hop count, bandwidth, delay, or policy) from source to destination through a graph G = (N, E) where N = routers and E = links with costs.</p>
+
+      <div class="concept-grid">
+        <div class="concept-card"><div class="cc-title">Link-State (LS)</div><div class="cc-body">Global info: each router knows complete network topology via flooding. Uses <strong>Dijkstra's algorithm</strong> to compute shortest paths. O(n²) or O(n log n) with priority queue. Result: shortest path tree → forwarding table entries.</div></div>
+        <div class="concept-card"><div class="cc-title">Distance Vector (DV)</div><div class="cc-body">Decentralized: each router only knows neighbors. Uses <strong>Bellman-Ford</strong>: D_x(y) = min over all neighbors v of (c(x,v) + D_v(y)). Iterative, distributed. Suffers count-to-infinity problem for bad news.</div></div>
+      </div>
+
+      <div class="callout"><strong>Count-to-Infinity Problem:</strong> In DV, bad news (link failure) spreads slowly because routers believe their neighbors still have a path. E.g., if x-y link fails: y says "I can reach x via z for cost 5" → z says "I can reach x via y for cost 6" → diverges. Fix: poisoned reverse (if I route through you to reach X, I tell you my cost to X is ∞).</div>
+
+      <h2>5.2 Dijkstra's Algorithm — Step by Step</h2>
+      <div class="code-block">Init: N' = {u}, D(u)=0, D(v)=c(u,v) for all neighbors v
+Loop until all nodes in N':
+  1. Pick w not in N' with min D(w)
+  2. Add w to N'
+  3. For each neighbor v of w not in N':
+     D(v) = min(D(v), D(w) + c(w,v))
+Result: shortest path from u to every other node</div>
+
+      <h2>5.3 Intra-AS Routing: OSPF</h2>
+      <p>An <strong>Autonomous System (AS)</strong> is a group of routers/networks under a single administration (e.g., Comcast, MIT, Google). OSPF is used <em>within</em> an AS.</p>
+      <ul>
+        <li><strong>OSPF (Open Shortest Path First):</strong> Link-state protocol. Each router floods link-state advertisements (LSAs) to ALL other routers in the AS (carried directly over IP, not TCP/UDP). Each router independently runs Dijkstra on the full topology.</li>
+        <li><strong>OSPF features:</strong> Security (MD5 authentication), multiple equal-cost paths, integrated unicast and multicast routing, hierarchical OSPF (backbone area + local areas), fast convergence.</li>
+        <li><strong>IS-IS:</strong> Similar to OSPF, also link-state, widely used by ISPs. Runs over data link layer (not IP).</li>
+      </ul>
+
+      <h2>5.4 Inter-AS Routing: BGP</h2>
+      <p>BGP (Border Gateway Protocol) is the "glue" of the Internet — the protocol that makes the global routing system work between autonomous systems.</p>
+      <ul>
+        <li><strong>eBGP:</strong> Between routers in different ASes. Learns which networks are reachable via neighbors.</li>
+        <li><strong>iBGP:</strong> Between routers in the same AS. Propagates eBGP-learned routes internally.</li>
+        <li><strong>BGP session:</strong> TCP port 179. Semi-permanent session between BGP peers (eBGP = 1 hop; iBGP = any distance).</li>
+        <li><strong>BGP routes (path vector):</strong> Carry full AS path, not just cost. Prevents loops (refuse routes containing your own AS number). Route attributes: AS-PATH (list of ASes), NEXT-HOP (border router), LOCAL-PREF (prefer this path), MED (multi-exit discriminator for incoming traffic).</li>
+        <li><strong>Hot potato routing:</strong> "Get the packet out of my AS ASAP." Route to closest NEXT-HOP border router, regardless of end-to-end path quality.</li>
+        <li><strong>Policy over cost:</strong> ISPs route based on business relationships (customer > peer > provider). BGP routes based on policy, not shortest path.</li>
+      </ul>
+
+      <h2>5.5 SDN Control Plane</h2>
+      <p>Instead of distributed routing algorithms in every router, a logically centralized <strong>SDN controller</strong> computes flow tables and installs them via OpenFlow.</p>
+      <ul>
+        <li><strong>OpenFlow southbound:</strong> Controller → switch communication. Messages: Flow-Mod (add/modify/delete entries), Packet-In (send packet to controller), Packet-Out, Stats-Request.</li>
+        <li><strong>SDN controllers:</strong> OpenDaylight (ODL), ONOS, Ryu, Floodlight. Apps (northbound) add routing, access control, load balancing logic on top.</li>
+        <li><strong>Benefits:</strong> Rapid innovation, easier management, vendor-neutral, programmable network behavior.</li>
+      </ul>
+
+      <h2>5.6 ICMP — Internet Control Message Protocol</h2>
+      <p>Used by hosts and routers to communicate network-level error/control messages. Carried in IP datagrams (protocol number 1).</p>
+      <ul>
+        <li><strong>ping:</strong> ICMP Echo Request (type 8) → ICMP Echo Reply (type 0). Tests reachability and RTT.</li>
+        <li><strong>traceroute:</strong> Sends UDP segments with TTL=1, 2, 3, … Each router that drops (TTL=0) sends ICMP Time Exceeded (type 11). Last hop sends ICMP Port Unreachable (type 3). Result: hop-by-hop path and RTTs.</li>
+        <li><strong>Other ICMP messages:</strong> Destination Unreachable (type 3), Source Quench (deprecated), Redirect (type 5), Router Advertisement/Solicitation.</li>
+      </ul>
+
+      <h2>5.7 Network Management: SNMP and NETCONF</h2>
+      <ul>
+        <li><strong>SNMP:</strong> Simple Network Management Protocol. Manager ↔ Agent. Operations: GetRequest, SetRequest, Trap (alert). MIB (Management Information Base) defines managed object types.</li>
+        <li><strong>NETCONF/YANG:</strong> Modern alternative. YANG = data modeling language. NETCONF = XML-based protocol for configuring, querying, and modifying network devices. More structured and programmable than SNMP.</li>
+      </ul>
+
+      <h3>Key Takeaways</h3>
+      <ul>
+        <li>LS uses Dijkstra (needs full topology); DV uses Bellman-Ford (only neighbor info)</li>
+        <li>OSPF is used inside a single AS; BGP connects autonomous systems across the Internet</li>
+        <li>BGP is path-vector — carries full AS path to prevent loops; routes on policy, not just cost</li>
+        <li>Hot potato routing: ISPs route traffic out of their AS at the nearest border router</li>
+        <li>SDN decouples control and data planes — centralized controller computes, switch hardware forwards</li>
+        <li>ICMP is used by ping and traceroute — essential diagnostic tools</li>
+      </ul>
+    `
+  },
+  {
+    num: 6,
+    title: "The Link Layer and LANs",
+    badge: "Ethernet · ARP · MAC · CRC · CSMA/CD · Switches · VLANs",
+    tags: ["Ethernet","ARP","CSMA/CD","MAC Address","Switch","VLAN","CRC","Parity","802.1Q","MPLS","STP"],
+    illustration: `<svg viewBox="0 0 700 190" xmlns="http://www.w3.org/2000/svg">
+      <rect width="700" height="190" fill="#141810"/>
+      <!-- Switch in center -->
+      <rect x="285" y="65" width="130" height="50" rx="8" fill="rgba(69,76,46,0.5)" stroke="#B5BEB2" stroke-width="1.5"/>
+      <text x="350" y="86" text-anchor="middle" font-family="Poppins,sans-serif" font-size="11" fill="#B5BEB2" font-weight="600">L2 Switch</text>
+      <text x="350" y="101" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#707C5B">Self-learning · MAC table</text>
+      <!-- Hosts -->
+      <rect x="20" y="60" width="85" height="60" rx="8" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1"/>
+      <text x="62" y="84" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#DDDDD6">Host A</text>
+      <text x="62" y="100" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#707C5B">AA:BB:CC:DD</text>
+      <text x="62" y="113" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#707C5B">192.168.1.2</text>
+      <rect x="595" y="60" width="85" height="60" rx="8" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1"/>
+      <text x="637" y="84" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#DDDDD6">Host B</text>
+      <text x="637" y="100" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#707C5B">11:22:33:44</text>
+      <text x="637" y="113" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#707C5B">192.168.1.5</text>
+      <rect x="305" y="130" width="90" height="40" rx="6" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1"/>
+      <text x="350" y="148" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#DDDDD6">Router (L3)</text>
+      <!-- Cables -->
+      <line x1="105" y1="90" x2="285" y2="90" stroke="#707C5B" stroke-width="2"/>
+      <line x1="415" y1="90" x2="595" y2="90" stroke="#707C5B" stroke-width="2"/>
+      <line x1="350" y1="115" x2="350" y2="130" stroke="#707C5B" stroke-width="2"/>
+      <!-- Ethernet frame -->
+      <rect x="65" y="20" width="570" height="30" rx="4" fill="rgba(69,76,46,0.25)" stroke="#454C2E" stroke-width="1"/>
+      <rect x="65" y="20" width="65" height="30" fill="rgba(181,190,178,0.12)"/>
+      <text x="97" y="38" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#B5BEB2">Preamble</text>
+      <rect x="130" y="20" width="80" height="30" fill="rgba(112,124,91,0.2)"/>
+      <text x="170" y="38" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#DDDDD6">Dest MAC</text>
+      <rect x="210" y="20" width="80" height="30" fill="rgba(112,124,91,0.2)"/>
+      <text x="250" y="38" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#DDDDD6">Src MAC</text>
+      <rect x="290" y="20" width="40" height="30" fill="rgba(69,76,46,0.2)"/>
+      <text x="310" y="38" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#707C5B">Type</text>
+      <rect x="330" y="20" width="220" height="30" fill="rgba(69,76,46,0.15)"/>
+      <text x="440" y="38" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#707C5B">Data (46–1500 bytes, IP datagram)</text>
+      <rect x="550" y="20" width="85" height="30" fill="rgba(181,190,178,0.12)"/>
+      <text x="592" y="38" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#B5BEB2">CRC (4B)</text>
+    </svg>`,
+    content: `
+      <h1>Chapter 6: The Link Layer and LANs</h1>
+      <p>The link layer transfers frames between <em>adjacent</em> nodes over a single link. It's where Ethernet, WiFi, and MAC addresses live. Every network interface has a link-layer component implemented in the NIC.</p>
+
+      <h2>6.1 Link Layer Services</h2>
+      <ul>
+        <li><strong>Framing:</strong> Encapsulate network-layer datagram into frame, add header and trailer.</li>
+        <li><strong>Link access (MAC):</strong> Coordinate which node can transmit on shared medium.</li>
+        <li><strong>Reliable delivery:</strong> Rarely used on low-error links (fiber, copper). Used on high-error wireless links. Note: end-to-end TCP reliability is still needed even with link-layer reliability.</li>
+        <li><strong>Error detection &amp; correction:</strong> Detect errors caused by signal attenuation and noise.</li>
+      </ul>
+      <p>Link layer is implemented in the <strong>NIC (Network Interface Card)</strong> — combination of hardware, software, and firmware. On the sending side, it encapsulates datagram into frame and adds error-check bits. On the receiving side, it checks for errors and extracts the datagram.</p>
+
+      <h2>6.2 Error Detection and Correction</h2>
+      <div class="concept-grid">
+        <div class="concept-card"><div class="cc-title">Parity Bits</div><div class="cc-body">Single parity: 1 extra bit makes total 1s even or odd. Detects single-bit errors only. 2D parity: row and column parity can also <em>correct</em> single-bit errors. Used in RAM ECC.</div></div>
+        <div class="concept-card"><div class="cc-title">Internet Checksum</div><div class="cc-body">Used in UDP/TCP/IP headers. Sum of 16-bit words (1's complement). Fast but weak — doesn't catch all burst errors. Not used at link layer (too weak).</div></div>
+        <div class="concept-card"><div class="cc-title">CRC (Cyclic Redundancy Check)</div><div class="cc-body">Most powerful. D = data bits; G = r+1 bit generator pattern. Compute r CRC bits R such that D+R is divisible by G (modulo 2). Detects ALL burst errors ≤ r bits. Used in Ethernet (CRC-32), WiFi, USB.</div></div>
+      </div>
+
+      <div class="callout"><strong>CRC Math:</strong> D·2ʳ XOR R = &lt;D,R&gt; exactly divisible by G (mod 2). Receiver divides &lt;D,R&gt; by G — non-zero remainder means error detected. r=32 in Ethernet → can detect all burst errors ≤ 32 bits.</div>
+
+      <h2>6.3 Multiple Access Protocols</h2>
+      <p>When multiple nodes share a broadcast link, we need MAC (Multiple Access Control) protocols to coordinate transmission and avoid/recover from collisions.</p>
+
+      <table class="ntable">
+        <tr><th>Category</th><th>Protocol</th><th>Key Behavior</th></tr>
+        <tr><td>Channel Partitioning</td><td>TDMA, FDMA, CDMA</td><td>Divide channel into slots/bands/codes. Fair but wasteful when underloaded.</td></tr>
+        <tr><td>Random Access</td><td>ALOHA, CSMA, CSMA/CD, CSMA/CA</td><td>Transmit freely; handle collisions. Efficient at low load.</td></tr>
+        <tr><td>Taking Turns</td><td>Polling, Token Ring</td><td>Master polls or token passed. No collisions but overhead.</td></tr>
+      </table>
+
+      <p><strong>CSMA/CD (Ethernet):</strong></p>
+      <ul>
+        <li>Carrier Sense: listen before transmitting. If busy, wait.</li>
+        <li>Collision Detection: detect collision while transmitting. Both stop immediately, send jam signal.</li>
+        <li>Binary Exponential Backoff: after nth collision, wait random time in {0, 1, …, 2ⁿ-1} × 512 bit times. Reduces collision probability after congestion.</li>
+        <li>Min frame size 64 bytes ensures sender can detect collision before finishing transmission on 100m+ Ethernet.</li>
+      </ul>
+
+      <h2>6.4 MAC Addresses and ARP</h2>
+      <ul>
+        <li><strong>MAC Address:</strong> 48 bits (6 bytes), written as AA:BB:CC:DD:EE:FF. Burned into NIC ROM. Flat — no hierarchical structure like IP. Does NOT change with network location (unlike IP).</li>
+        <li><strong>Broadcast MAC:</strong> FF:FF:FF:FF:FF:FF — sent to all nodes in same LAN.</li>
+        <li><strong>ARP (Address Resolution Protocol):</strong> Maps IP address → MAC address on the same subnet. Sender broadcasts ARP query ("Who has IP 192.168.1.5?"). Only node with that IP replies with its MAC. Result cached in ARP table with TTL (~20 min).</li>
+        <li><strong>ARP across subnets:</strong> ARP is local — you ARP for your default gateway's MAC, not the remote host's MAC. The gateway router handles forwarding to the next subnet.</li>
+      </ul>
+
+      <h2>6.5 Ethernet</h2>
+      <p>Ethernet (IEEE 802.3) is the dominant wired LAN technology. Originally bus (1990s), now star topology with switches. Connectionless, unreliable (no ACKs at link layer).</p>
+      <ul>
+        <li><strong>Ethernet frame:</strong> Preamble (7 bytes, 10101010 sync) + SFD (1B, 10101011) + Dest MAC + Src MAC + Type/Length (2B, 0x0800=IPv4, 0x0806=ARP) + Data (46–1500 bytes) + CRC (4B).</li>
+        <li><strong>802.3 speeds:</strong> 10 Mbps (10BASE-T, coax) → 100 Mbps (Fast Ethernet) → 1 Gbps (Gigabit Ethernet) → 10/40/100 Gbps (datacenter).</li>
+      </ul>
+
+      <h2>6.6 Link-Layer Switches</h2>
+      <ul>
+        <li><strong>Transparency:</strong> Hosts are unaware of the switch. No configuration needed. Switches are plug-and-play.</li>
+        <li><strong>Self-learning:</strong> When a frame arrives on port x from MAC AA, switch records (AA → port x) in switch table with TTL. If dest MAC known, forward to that port. If unknown (or broadcast), flood all ports except incoming.</li>
+        <li><strong>Spanning Tree Protocol (STP):</strong> Prevents broadcast storms from loops. Creates a tree of active links, disabling redundant paths. Extended: RSTP (rapid), MSTP (multiple VLANs).</li>
+        <li><strong>Switch vs Router:</strong> Switch = Layer 2 (MAC), self-learning, plug-and-play. Router = Layer 3 (IP), requires IP configuration, runs routing protocols, provides TTL/firewall barrier.</li>
+      </ul>
+
+      <h2>6.7 VLANs</h2>
+      <p><strong>Virtual LANs</strong> allow one physical switch to be configured as multiple logical switches, each with its own broadcast domain.</p>
+      <ul>
+        <li><strong>Port-based VLAN:</strong> Each switch port assigned to a VLAN. Broadcast stays within VLAN. Between VLANs, traffic must go through a router (Layer 3).</li>
+        <li><strong>802.1Q VLAN tag:</strong> 4-byte tag inserted into Ethernet frame on trunk ports between switches. Contains VLAN ID (12 bits = 4096 VLANs). Trunk port carries traffic for multiple VLANs.</li>
+        <li><strong>Benefits:</strong> Security (isolate departments), performance (smaller broadcast domains), flexibility (users can move without recabling).</li>
+      </ul>
+
+      <h2>6.8 Day in the Life of a Web Request</h2>
+      <p>When you type www.google.com, here's what happens at the link layer and below:</p>
+      <ul>
+        <li>DHCP request (UDP broadcast) to get IP, mask, default gateway, DNS server IP</li>
+        <li>ARP for default gateway MAC → switch self-learns your MAC → gateway ARP replies</li>
+        <li>DNS query to DNS server (UDP, through router) → reply with Google's IP</li>
+        <li>TCP 3-way handshake to Google server → HTTP GET → HTTP response</li>
+        <li>Each step involves Ethernet framing, ARP lookups, switch forwarding, and router forwarding</li>
+      </ul>
+
+      <h3>Key Takeaways</h3>
+      <ul>
+        <li>CRC is the strongest error detection — used in Ethernet, WiFi, USB</li>
+        <li>CSMA/CD: sense before send, detect collision, jam, backoff — the heart of traditional Ethernet</li>
+        <li>MAC address is flat 48-bit hardware address; IP is hierarchical 32-bit logical address</li>
+        <li>ARP maps IP→MAC on a subnet; broadcast query, unicast reply, cached with TTL</li>
+        <li>Ethernet switches are self-learning, plug-and-play; they flood unknown destinations</li>
+        <li>VLANs logically partition switches; 802.1Q tags carry VLAN ID on trunk ports</li>
+      </ul>
+    `
+  },
+  {
+    num: 7,
+    title: "Wireless and Mobile Networks",
+    badge: "WiFi 802.11 · CSMA/CA · 4G LTE · 5G NR · Mobility · IoT",
+    tags: ["802.11","CSMA/CA","OFDM","MIMO","4G LTE","5G NR","Handoff","Bluetooth","LoRaWAN","LEO","IoT","Hidden Terminal"],
+    illustration: `<svg viewBox="0 0 700 190" xmlns="http://www.w3.org/2000/svg">
+      <rect width="700" height="190" fill="#141810"/>
+      <!-- Access Point -->
+      <rect x="290" y="18" width="120" height="40" rx="8" fill="rgba(69,76,46,0.5)" stroke="#B5BEB2" stroke-width="1.5"/>
+      <text x="350" y="42" text-anchor="middle" font-family="Poppins,sans-serif" font-size="11" fill="#B5BEB2" font-weight="600">Access Point (AP)</text>
+      <!-- WiFi waves -->
+      <path d="M312 17 Q350 0 388 17" fill="none" stroke="#707C5B" stroke-width="2" opacity="0.9"/>
+      <path d="M295 17 Q350 -6 405 17" fill="none" stroke="#707C5B" stroke-width="1.5" opacity="0.6"/>
+      <path d="M275 19 Q350 -16 425 19" fill="none" stroke="#707C5B" stroke-width="1.5" opacity="0.3"/>
+      <!-- Laptop -->
+      <rect x="50" y="108" width="90" height="55" rx="6" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1"/>
+      <text x="95" y="132" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#DDDDD6">Laptop</text>
+      <text x="95" y="148" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#707C5B">STA (station)</text>
+      <!-- Phone -->
+      <rect x="305" y="112" width="50" height="65" rx="8" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1"/>
+      <text x="330" y="143" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#DDDDD6">Phone</text>
+      <text x="330" y="158" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#707C5B">UE</text>
+      <!-- Cell Tower right -->
+      <polygon points="580,20 595,80 565,80" fill="rgba(69,76,46,0.4)" stroke="#454C2E" stroke-width="1"/>
+      <text x="580" y="96" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#B5BEB2">5G gNB</text>
+      <path d="M560 30 Q580 10 600 30" fill="none" stroke="#B5BEB2" stroke-width="1.5" opacity="0.6"/>
+      <path d="M548 36 Q580 5 612 36" fill="none" stroke="#B5BEB2" stroke-width="1" opacity="0.3"/>
+      <!-- IoT sensor -->
+      <circle cx="580" cy="145" r="28" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1"/>
+      <text x="580" y="141" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#DDDDD6">IoT</text>
+      <text x="580" y="156" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#707C5B">LoRaWAN</text>
+      <!-- Dashed links to AP -->
+      <line x1="140" y1="118" x2="290" y2="52" stroke="#707C5B" stroke-width="1.5" stroke-dasharray="5,3"/>
+      <line x1="330" y1="112" x2="345" y2="58" stroke="#B5BEB2" stroke-width="1.5" stroke-dasharray="5,3"/>
+      <!-- Labels bottom -->
+      <text x="350" y="175" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#707C5B">CSMA/CA (avoid) · BSS: AP+stations · 2.4/5/6 GHz · 4G/5G for WAN</text>
+    </svg>`,
+    content: `
+      <h1>Chapter 7: Wireless and Mobile Networks</h1>
+      <p>Over 60% of Internet traffic goes to mobile devices. Wireless networking presents unique challenges: shared radio medium, path loss, interference, and mobility.</p>
+
+      <h2>7.1 Introduction to Wireless</h2>
+      <div class="concept-grid">
+        <div class="concept-card"><div class="cc-title">Wireless Challenges</div><div class="cc-body">Path loss: signal weakens with distance (free-space: 1/d²; obstructions worse). Multipath propagation: reflections cause fading. Interference: overlapping 2.4GHz devices. Hidden terminal: A and C both hear B but not each other.</div></div>
+        <div class="concept-card"><div class="cc-title">SNR vs BER</div><div class="cc-body">Higher SNR (Signal-to-Noise Ratio) → lower BER (Bit Error Rate). Can trade: higher SNR → use faster modulation (more bits/symbol) at same BER. Adaptive modulation (OFDM) adjusts to channel.</div></div>
+        <div class="concept-card"><div class="cc-title">CDMA</div><div class="cc-body">Code Division Multiple Access: each user has unique chip sequence (code). Signals overlap in time/frequency but are separable by code. Receiver multiplies by code, sums → extracts bits. Used in 3G cellular, GPS.</div></div>
+      </div>
+
+      <h2>7.2 WiFi: IEEE 802.11</h2>
+      <p>IEEE 802.11 is the dominant wireless LAN standard. A <strong>BSS (Basic Service Set)</strong> = Access Point (AP) + associated stations. The AP connects to the wired LAN (SSID identifies the network).</p>
+
+      <h2>7.2.1 CSMA/CA — The 802.11 MAC</h2>
+      <p>WiFi cannot use CSMA/CD because a wireless node cannot detect collisions while transmitting (transmit power overwhelms received signal). Instead, 802.11 uses <strong>Collision Avoidance (CA)</strong>:</p>
+      <div class="code-block">CSMA/CA Sender:
+1. Sense channel: if idle for DIFS time → transmit
+2. If busy: random backoff [0, CW] slot times
+   (CW doubles after each failure, up to max)
+3. After backoff: re-sense channel → if idle, transmit
+4. If using RTS/CTS:
+   Send RTS → wait for CTS from AP → transmit DATA → wait for ACK
+   Other nodes see NAV (silence) in RTS/CTS and defer
+
+802.11 Receiver:
+- If frame OK → wait SIFS → send ACK</div>
+
+      <div class="callout"><strong>RTS/CTS (optional):</strong> Solves hidden terminal problem. Sender sends RTS (Request to Send) → AP broadcasts CTS (Clear to Send) → all nodes in AP range defer. Used for large frames; adds overhead for small frames.</div>
+
+      <table class="ntable">
+        <tr><th>802.11 Version</th><th>Frequency</th><th>Max Throughput</th><th>Key Feature</th></tr>
+        <tr><td>802.11b</td><td>2.4 GHz</td><td>11 Mbps</td><td>First mass-market WiFi</td></tr>
+        <tr><td>802.11a/g</td><td>5/2.4 GHz</td><td>54 Mbps</td><td>OFDM modulation</td></tr>
+        <tr><td>802.11n (WiFi 4)</td><td>2.4/5 GHz</td><td>600 Mbps</td><td>MIMO (4×4)</td></tr>
+        <tr><td>802.11ac (WiFi 5)</td><td>5 GHz</td><td>3.5 Gbps</td><td>MU-MIMO, beamforming, 256-QAM</td></tr>
+        <tr><td>802.11ax (WiFi 6/6E)</td><td>2.4/5/6 GHz</td><td>9.6 Gbps</td><td>OFDMA, BSS coloring, TWT</td></tr>
+      </table>
+
+      <h2>7.3 4G LTE Architecture</h2>
+      <p>4G LTE (Long Term Evolution) is the dominant cellular standard. Fully packet-switched (no circuit switching unlike 2G/3G).</p>
+      <ul>
+        <li><strong>UE (User Equipment):</strong> Mobile device (smartphone, tablet).</li>
+        <li><strong>eNB (eNodeB):</strong> 4G base station. Communicates with UE over radio; connects to EPC over S1 interface.</li>
+        <li><strong>EPC (Evolved Packet Core):</strong>
+          <ul>
+            <li><strong>MME (Mobility Management Entity):</strong> Authentication, mobility management, paging, session management.</li>
+            <li><strong>S-GW (Serving Gateway):</strong> Data plane gateway; routes packets to/from eNB. Maintains tunnel state.</li>
+            <li><strong>P-GW (PDN Gateway):</strong> Connects cellular network to Internet. Assigns IP, provides NAT, QoS enforcement.</li>
+            <li><strong>HSS (Home Subscriber Server):</strong> Database of subscriber information.</li>
+          </ul>
+        </li>
+        <li><strong>Radio access:</strong> OFDMA downlink (AP → UE), SC-FDMA uplink (UE → AP). LTE uses 64-QAM, 20 MHz channels, up to 150 Mbps downlink.</li>
+      </ul>
+
+      <h2>7.4 5G New Radio (5G NR)</h2>
+      <p>5G is fundamentally different from 4G — it's cloud-native and designed for extreme flexibility.</p>
+      <ul>
+        <li><strong>5G Core (5GC):</strong> Cloud-native, service-based architecture. AMF (access management), UPF (user plane function), SMF (session management). Control and user plane are fully separated.</li>
+        <li><strong>Network Slicing:</strong> Multiple virtual networks on one physical infrastructure — each slice has different QoS (eMBB for broadband, URLLC for ultra-low latency, mMTC for IoT).</li>
+        <li><strong>gNB:</strong> 5G base station. Splits into CU (centralized unit) + DU (distributed unit) for flexible deployment.</li>
+        <li><strong>mmWave (millimeter wave):</strong> 24–100 GHz spectrum → huge bandwidth but very short range and poor penetration. Massive MIMO (64–256 antennas) + beamforming compensate.</li>
+        <li><strong>sub-6 GHz 5G:</strong> Lower frequencies, better range/penetration, less bandwidth. Nation-wide coverage.</li>
+      </ul>
+
+      <h2>7.5 Mobility Management</h2>
+      <ul>
+        <li><strong>Handoff (4G):</strong> Measurement-based. UE reports signal quality → eNB decides to trigger handoff → X2 interface between eNBs for direct handoff → seamless for user.</li>
+        <li><strong>WiFi handoff:</strong> No standard protocol for seamless handoff between APs. Device reconnects to new AP (brief disconnection). 802.11r (Fast BSS Transition) speeds it up.</li>
+        <li><strong>Mobile IP:</strong> Protocol for maintaining IP address while roaming between networks. Home agent, foreign agent, care-of address. Adds tunneling overhead. Largely replaced by proxy-based schemes in 4G/5G.</li>
+      </ul>
+
+      <h2>7.6 Bluetooth, Satellite, IoT</h2>
+      <ul>
+        <li><strong>Bluetooth (802.15.1):</strong> 2.4 GHz, piconet (1 master + 7 active slaves). Short range (10m), low power. Frequency hopping (1600 hops/sec) for interference avoidance. BLE (Bluetooth Low Energy) for IoT.</li>
+        <li><strong>LEO Satellites (Starlink):</strong> ~550 km altitude. Round-trip latency ~20-40ms (vs GEO ~500ms). Thousands of satellites for global coverage. High download speeds (100-500 Mbps). Serving remote areas, maritime, aviation.</li>
+        <li><strong>LoRaWAN:</strong> Long Range, Low Power. Km range on tiny battery (years). Very low data rate (0.3-50 kbps). For IoT sensors: agricultural, environmental, asset tracking. Star topology: sensors → gateway → cloud.</li>
+        <li><strong>Zigbee (802.15.4):</strong> Mesh network, 250 kbps, 10-100m. Smart home automation, industrial. Low power.</li>
+      </ul>
+
+      <h3>Key Takeaways</h3>
+      <ul>
+        <li>WiFi uses CSMA/CA (avoidance) not CD (detection) — can't hear collisions while transmitting</li>
+        <li>Hidden terminal problem: A and C can't hear each other but both collide at B; RTS/CTS is the fix</li>
+        <li>4G LTE is fully packet-switched; EPC = MME (control) + S-GW/P-GW (data)</li>
+        <li>5G is cloud-native with network slicing — one infrastructure serves many use cases</li>
+        <li>mmWave 5G: huge bandwidth but short range; massive MIMO beamforming compensates</li>
+        <li>LEO satellites (Starlink) offer ~20-40ms latency — much better than GEO (500ms)</li>
+        <li>LoRaWAN enables km-range, multi-year battery IoT sensors — prioritizes range over speed</li>
+      </ul>
+    `
+  },
+  {
+    num: 8,
+    title: "Security in Computer Networks",
+    badge: "Cryptography · TLS · IPsec · Firewalls · Digital Signatures",
+    tags: ["AES","RSA","DH","TLS 1.3","HTTPS","IPsec","WPA3","Digital Signature","PKI","CA","HMAC","Firewall","IDS"],
+    illustration: `<svg viewBox="0 0 700 190" xmlns="http://www.w3.org/2000/svg">
+      <rect width="700" height="190" fill="#141810"/>
+      <!-- Shield -->
+      <path d="M310 18 L390 18 L410 62 L390 162 L310 162 L290 62 Z" fill="rgba(69,76,46,0.3)" stroke="#707C5B" stroke-width="1.5"/>
+      <circle cx="350" cy="88" r="24" fill="rgba(69,76,46,0.6)" stroke="#B5BEB2" stroke-width="2"/>
+      <rect x="341" y="98" width="18" height="24" rx="4" fill="#B5BEB2"/>
+      <path d="M337 98 Q337 78 350 78 Q363 78 363 98" fill="none" stroke="#B5BEB2" stroke-width="3"/>
+      <!-- Alice -->
+      <circle cx="88" cy="90" r="24" fill="rgba(69,76,46,0.4)" stroke="#454C2E" stroke-width="1.5"/>
+      <text x="88" y="86" text-anchor="middle" font-family="Poppins,sans-serif" font-size="12" fill="#DDDDD6">Alice</text>
+      <text x="88" y="102" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#707C5B">Sender</text>
+      <!-- Bob -->
+      <circle cx="612" cy="90" r="24" fill="rgba(69,76,46,0.4)" stroke="#454C2E" stroke-width="1.5"/>
+      <text x="612" y="86" text-anchor="middle" font-family="Poppins,sans-serif" font-size="12" fill="#DDDDD6">Bob</text>
+      <text x="612" y="102" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#707C5B">Receiver</text>
+      <!-- Encrypt/decrypt boxes -->
+      <rect x="155" y="78" width="115" height="26" rx="5" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1"/>
+      <text x="212" y="94" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#B5BEB2">Encrypt (K+)</text>
+      <rect x="430" y="78" width="115" height="26" rx="5" fill="rgba(69,76,46,0.35)" stroke="#454C2E" stroke-width="1"/>
+      <text x="487" y="94" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#B5BEB2">Decrypt (K-)</text>
+      <!-- Ciphertext -->
+      <rect x="288" y="168" width="124" height="22" rx="5" fill="rgba(112,124,91,0.2)" stroke="#707C5B" stroke-width="1"/>
+      <text x="350" y="183" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#B5BEB2">CA Certificate (PKI)</text>
+      <!-- Trudy/attacker -->
+      <text x="350" y="58" text-anchor="middle" font-family="Poppins,sans-serif" font-size="9" fill="#707C5B">Trudy (attacker)</text>
+      <text x="350" y="70" text-anchor="middle" font-family="Poppins,sans-serif" font-size="8" fill="#454C2E">↑ TLS encrypted — can't read</text>
+      <!-- Arrows -->
+      <line x1="112" y1="90" x2="155" y2="90" stroke="#707C5B" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <line x1="270" y1="90" x2="290" y2="90" stroke="#B5BEB2" stroke-width="2"/>
+      <line x1="410" y1="90" x2="430" y2="90" stroke="#B5BEB2" stroke-width="2"/>
+      <line x1="545" y1="90" x2="588" y2="90" stroke="#707C5B" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <text x="350" y="150" text-anchor="middle" font-family="Poppins,sans-serif" font-size="10" fill="#707C5B">TLS 1.3 · IPsec · WPA3 · Firewalls · IDS</text>
+    </svg>`,
+    content: `
+      <h1>Chapter 8: Security in Computer Networks</h1>
+      <p>The Internet was originally designed without security — "a community of trusted users." Today we need to secure every layer. This chapter covers the principles of cryptography and their application in real protocols.</p>
+
+      <h2>8.1 What is Network Security?</h2>
+      <p>Four fundamental security properties:</p>
+      <div class="concept-grid">
+        <div class="concept-card"><div class="cc-title">Confidentiality</div><div class="cc-body">Only sender and intended receiver understand message contents. Achieved by encryption: sender encrypts, receiver decrypts. Symmetric key or asymmetric key encryption.</div></div>
+        <div class="concept-card"><div class="cc-title">Authentication</div><div class="cc-body">Sender and receiver confirm each other's identity. "You are really who you claim to be." Prevents impersonation attacks (spoofing). Achieved via digital signatures, challenge-response.</div></div>
+        <div class="concept-card"><div class="cc-title">Message Integrity</div><div class="cc-body">Message not altered in transit without detection. Even if confidentiality isn't needed, integrity ensures the received message equals the sent message. Achieved via MACs and digital signatures.</div></div>
+        <div class="concept-card"><div class="cc-title">Access &amp; Availability</div><div class="cc-body">Services must be accessible to legitimate users. DoS/DDoS attacks violate this. Mitigated by firewalls, rate limiting, anycast, CDN distribution, scrubbing centers.</div></div>
+      </div>
+
+      <h2>8.2 Principles of Cryptography</h2>
+
+      <h2>8.2.1 Symmetric Key Cryptography</h2>
+      <p>Both sender and receiver share the same secret key KS. Sender computes c = KS(m); receiver computes m = KS(c).</p>
+      <ul>
+        <li><strong>DES (Data Encryption Standard):</strong> 56-bit key, 64-bit blocks. Broken in &lt;24 hours by brute force. 3DES uses 3 different 56-bit keys (168 bits effective). Now deprecated.</li>
+        <li><strong>AES (Advanced Encryption Standard):</strong> 128-bit blocks; 128, 192, or 256-bit keys. Replacing DES to brute-force AES-128 would take longer than the age of the universe at DES-cracking speeds. Current gold standard for symmetric encryption.</li>
+        <li><strong>Modes:</strong> ECB (insecure, same plaintext → same ciphertext), CBC (chain previous ciphertext into encryption), CTR (counter mode, parallelizable).</li>
+      </ul>
+
+      <h2>8.2.2 Public Key Cryptography</h2>
+      <p>Radically different: each entity has a <strong>public key K⁺</strong> (known to all) and a <strong>private key K⁻</strong> (secret). A message encrypted with the public key can only be decrypted by the private key, and vice versa.</p>
+      <ul>
+        <li><strong>RSA (Rivest, Shamir, Adleman):</strong> Based on difficulty of factoring large primes. Choose two large primes p, q → n=pq → choose exponents e,d such that ed mod (p-1)(q-1) = 1 → public key (n,e), private key (n,d). Encrypt: c = mᵉ mod n. Decrypt: m = c^d mod n.</li>
+        <li><strong>Diffie-Hellman Key Exchange:</strong> Allows two parties to establish a shared secret over insecure channel. Based on discrete logarithm. Used in TLS for perfect forward secrecy.</li>
+        <li><strong>Performance:</strong> RSA is 1000× slower than AES. Practical systems use RSA/DH for key exchange + AES for bulk data (hybrid cryptography).</li>
+      </ul>
+
+      <h2>8.3 Message Integrity and Digital Signatures</h2>
+      <ul>
+        <li><strong>Cryptographic Hash:</strong> H(m) = fixed-length digest. Properties: one-way (can't find m from H(m)), collision-resistant (infeasible to find m≠m' with H(m)=H(m')). MD5 (128-bit, broken), SHA-1 (160-bit, broken), SHA-256 (256-bit, secure), SHA-3.</li>
+        <li><strong>MAC (Message Authentication Code) / HMAC:</strong> MAC = H(m + s) where s is shared secret key. Proves integrity AND authenticity BUT not non-repudiation (both parties know the secret).</li>
+        <li><strong>Digital Signature:</strong> Alice signs by computing signature = K⁻_Alice(H(m)) (encrypt hash with private key). Bob verifies: K⁺_Alice(signature) = H(m). Provides non-repudiation — only Alice has K⁻_Alice. Example: email signing, software packages, code commits.</li>
+        <li><strong>PKI &amp; Certificate Authorities:</strong> How do you trust a public key? CA (Certificate Authority, e.g., DigiCert, Let's Encrypt) digitally signs a certificate binding a public key to an identity. Browser pre-installs trusted CA root certificates. Certificate chain: Root CA → Intermediate CA → End Entity Certificate.</li>
+      </ul>
+
+      <div class="callout"><strong>MAC vs Digital Signature:</strong> MAC uses shared secret — both parties can create it, so you can't prove to a third party who created it (no non-repudiation). Digital signature uses private key — only signer can create it. Digital signatures are publicly verifiable.</div>
+
+      <h2>8.4 TLS (Transport Layer Security)</h2>
+      <p>TLS (formerly SSL) provides encrypted TCP connections. It's the foundation of HTTPS (HTTP over TLS). Runs between transport and application layers.</p>
+      <div class="code-block">TLS 1.3 Handshake (1 RTT):
+Client → Server: ClientHello (TLS version, cipher suites, key_share)
+Server → Client: ServerHello + Certificate + CertificateVerify + Finished
+                 (certificate = identity; key_share enables session keys)
+Client → Server: Finished + Application Data (HTTP GET)
+                 (early data possible: 0-RTT on reconnect)</div>
+
+      <ul>
+        <li><strong>TLS provides:</strong> Confidentiality (AES-GCM), Integrity (AEAD), Authentication (certificate), Perfect Forward Secrecy (DHE/ECDHE key exchange).</li>
+        <li><strong>Perfect Forward Secrecy (PFS):</strong> Session keys generated fresh each session using DH. Compromise of server's private key does NOT reveal past sessions.</li>
+        <li><strong>Certificate Revocation:</strong> OCSP (Online Certificate Status Protocol) and CRL (Certificate Revocation List) allow checking if a certificate has been revoked before expiry.</li>
+      </ul>
+
+      <h2>8.5 Network Layer Security: IPsec</h2>
+      <p>IPsec provides security at the IP layer — transparent to applications.</p>
+      <ul>
+        <li><strong>Transport Mode:</strong> Encrypts/authenticates just the payload. IP header remains. Used host-to-host.</li>
+        <li><strong>Tunnel Mode (VPN):</strong> Encrypts entire original IP datagram and wraps in a new IP header. Used for VPNs between gateway routers. Remote worker ↔ company gateway ↔ company LAN.</li>
+        <li><strong>ESP (Encapsulating Security Payload):</strong> Provides confidentiality, integrity, and authentication. Most common. AH (Authentication Header) provides only authentication (no encryption).</li>
+        <li><strong>IKE (Internet Key Exchange):</strong> Establishes Security Associations (SAs) — bidirectional tunnels with agreed cipher, key, expiry.</li>
+      </ul>
+
+      <h2>8.6 Security in WiFi: WPA3</h2>
+      <ul>
+        <li><strong>WEP:</strong> Broken (2001). Static keys, weak IV, RC4 stream cipher. Do not use.</li>
+        <li><strong>WPA2:</strong> Uses AES-CCMP. Personal mode: Pre-Shared Key (PSK) + PBKDF2. Enterprise mode: 802.1X with RADIUS authentication. Vulnerable to KRACK and offline dictionary attacks on PSK.</li>
+        <li><strong>WPA3:</strong> Replaces PSK with <strong>SAE (Simultaneous Authentication of Equals)</strong> — Dragonfly key exchange. Resistant to offline dictionary attacks. Provides forward secrecy. WPA3-Enterprise uses 192-bit CNSA security suite.</li>
+      </ul>
+
+      <h2>8.7 Firewalls and IDS</h2>
+      <div class="concept-grid">
+        <div class="concept-card"><div class="cc-title">Stateless Firewall</div><div class="cc-body">Filters based on header fields: src/dest IP, port, protocol. No memory of connections. Fast but limited. Can be bypassed with fragmentation or spoofing. Simple ACL (Access Control List) rules.</div></div>
+        <div class="concept-card"><div class="cc-title">Stateful Firewall</div><div class="cc-body">Tracks connection state (SYN, ESTABLISHED, FIN). Only allows inbound packets that are part of established outbound connections. Much more effective than stateless. Modern default.</div></div>
+        <div class="concept-card"><div class="cc-title">Application Gateway</div><div class="cc-body">Application-layer inspection. Can inspect HTTP, FTP, DNS content. Proxy-based: client connects to proxy, proxy connects to server. Can enforce content policies (block YouTube, etc.).</div></div>
+        <div class="concept-card"><div class="cc-title">IDS/IPS</div><div class="cc-body">Intrusion Detection System: monitors traffic for attack signatures and anomalies. IPS (Prevention) can block. Deep Packet Inspection (DPI): inspects payload, not just header. Can detect worms, malware, P2P, etc.</div></div>
+      </div>
+
+      <h3>Key Takeaways</h3>
+      <ul>
+        <li>Symmetric (AES): same key encrypt/decrypt, fast, 128/256-bit keys — use for bulk data</li>
+        <li>Asymmetric (RSA): public key encrypts, private key decrypts, slow — use for key exchange &amp; signatures</li>
+        <li>MAC = integrity + authenticity (shared secret); Digital Signature = non-repudiation (private key)</li>
+        <li>TLS 1.3: 1-RTT handshake, ECDHE for perfect forward secrecy, AEAD ciphers (AES-GCM)</li>
+        <li>IPsec Tunnel Mode = VPN — encrypts entire IP datagram, wraps in new IP header</li>
+        <li>WPA3 with SAE replaces WPA2's PSK — resistant to offline dictionary attacks, adds forward secrecy</li>
+        <li>Stateful firewalls track connections — far more effective than stateless header-matching rules</li>
+      </ul>
+    `
+  }
+];
+
+// ─── Render Chapters ──────────────────────────────────
+const container = document.getElementById('chapters');
+
+chapters.forEach((ch, idx) => {
+  const card = document.createElement('div');
+  card.className = 'chapter-card';
+  card.id = `ch-${idx}`;
+
+  card.innerHTML = `
+    <div class="ch-header" onclick="toggle(${idx})">
+      <div class="ch-num">${ch.num}</div>
+      <div class="ch-title-wrap">
+        <h2>${ch.title}</h2>
+        <div class="ch-badge">${ch.badge}</div>
+      </div>
+      <div class="ch-arrow">▾</div>
+    </div>
+    <div class="ch-body">
+      <div class="ch-content">
+        <div class="ch-illustration">${ch.illustration}</div>
+        ${ch.content}
+        <div class="tags">${ch.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+      </div>
+    </div>`;
+
+  container.appendChild(card);
+});
+
+// ─── Accordion Logic ─────────────────────────────────
+function toggle(idx) {
+  const cards = document.querySelectorAll('.chapter-card');
+  cards.forEach((card, i) => {
+    if (i === idx) {
+      card.classList.toggle('active');
+    } else {
+      card.classList.remove('active');
+    }
+  });
+  // Scroll to chapter if opening
+  const card = document.getElementById(`ch-${idx}`);
+  if (card.classList.contains('active')) {
+    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  }
+}
+
+// ─── Dropdown Jump ────────────────────────────────────
+document.getElementById('chapterSelect').addEventListener('change', function() {
+  const idx = this.value;
+  if (idx === '') return;
+  const i = parseInt(idx);
+  document.querySelectorAll('.chapter-card').forEach((c, j) => {
+    c.classList.toggle('active', j === i);
+  });
+  setTimeout(() => {
+    document.getElementById(`ch-${i}`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+  this.value = '';
+});
+</script>
+</body>
+</html>
